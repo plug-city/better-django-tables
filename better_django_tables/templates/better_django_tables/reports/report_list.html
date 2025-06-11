@@ -1,0 +1,80 @@
+{% load render_table from django_tables2 %}
+{% load static %}
+
+{% block title %}Reports Management{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2>Reports Management</h2>
+                <div class="text-muted small">
+                    Total: {{ total_reports }} |
+                    My Reports: {{ my_reports }} |
+                    Global: {{ global_reports }} |
+                    Group: {{ group_reports }}
+                </div>
+            </div>
+
+            <!-- Filter Form -->
+            {% if filter %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Filter Reports</h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="get" class="row g-3">
+                            <div class="col-md-3">
+                                {{ filter.form.name.label_tag }}
+                                {{ filter.form.name }}
+                            </div>
+                            <div class="col-md-3">
+                                {{ filter.form.visibility.label_tag }}
+                                {{ filter.form.visibility }}
+                            </div>
+                            <div class="col-md-3">
+                                {{ filter.form.created_by.label_tag }}
+                                {{ filter.form.created_by }}
+                            </div>
+                            <div class="col-md-3">
+                                {{ filter.form.view_name.label_tag }}
+                                {{ filter.form.view_name }}
+                            </div>
+                            <div class="col-md-3">
+                                {{ filter.form.created_at.label_tag }}
+                                {{ filter.form.created_at }}
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <div class="form-check me-3">
+                                    {{ filter.form.my_reports }}
+                                    {{ filter.form.my_reports.label_tag }}
+                                </div>
+                                <div class="form-check me-3">
+                                    {{ filter.form.has_filters }}
+                                    {{ filter.form.has_filters.label_tag }}
+                                </div>
+                                <div class="form-check">
+                                    {{ filter.form.is_active }}
+                                    {{ filter.form.is_active.label_tag }}
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">Filter</button>
+                                <a href="{% url 'better_django_tables:report_list' %}" class="btn btn-outline-secondary">Clear</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Reports Table -->
+            {% render_table table %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,209 @@
+{% load static %}
+
+<!-- Reports Section -->
+<div class="col-auto">
+    <div class="btn-group">
+        <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-bookmarks"></i> Reports
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" style="min-width: 300px;">
+            <!-- Check if there are any favorite reports first -->
+            {% for report in available_reports %}
+                {% if report.is_favorite %}
+                    <li>
+                        <div class="dropdown-item-group d-flex justify-content-between align-items-center">
+                            <a class="dropdown-item flex-grow-1" href="{{ report.get_absolute_url }}">
+                                <i class="bi bi-star-fill text-warning"></i> {{ report.name }}
+                                <small class="text-muted d-block">{{ report.get_visibility_display }}</small>
+                            </a>
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="report_id" value="{{ report.id }}">
+                                <button type="submit" name="toggle_favorite" class="btn btn-sm btn-link p-0 ms-2" title="Remove from favorites">
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Add separator if there are favorites -->
+            {% with has_favorites=False %}
+                {% for report in available_reports %}
+                    {% if report.is_favorite %}
+                        {% if not has_favorites %}
+                            <li><hr class="dropdown-divider"></li>
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            {% endwith %}
+
+            <!-- All Reports -->
+            <li><h6 class="dropdown-header">All Reports</h6></li>
+            {% for report in available_reports %}
+                <li>
+                    <div class="dropdown-item-group d-flex justify-content-between align-items-center">
+                        <a class="dropdown-item flex-grow-1" href="{{ report.get_absolute_url }}">
+                            {% if not report.is_favorite %}
+                                <i class="bi bi-file-earmark-text"></i>
+                            {% else %}
+                                <i class="bi bi-star-fill text-warning"></i>
+                            {% endif %}
+                            {{ report.name }}
+                            <small class="text-muted d-block">
+                                {{ report.get_visibility_display }}
+                                {% if report.visibility == 'role' and report.allowed_groups.exists %}
+                                    - {{ report.allowed_groups.all|join:", " }}
+                                {% endif %}
+                            </small>
+                        </a>
+                        {% if not report.is_favorite %}
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="report_id" value="{{ report.id }}">
+                                <button type="submit" name="toggle_favorite" class="btn btn-sm btn-link p-0 ms-2" title="Add to favorites">
+                                    <i class="bi bi-star"></i>
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </li>
+            {% empty %}
+                <li><span class="dropdown-item text-muted">No saved reports</span></li>
+            {% endfor %}
+
+            <!-- Actions -->
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#saveReportModal">
+                    <i class="bi bi-floppy"></i> Save Current View
+                </button>
+            </li>
+            <li>
+                <a class="dropdown-item" href="{% url 'better_django_tables:report_list' %}">
+                    <i class="bi bi-gear"></i> Manage Reports
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- Save Report Modal -->
+<div class="modal fade" id="saveReportModal" tabindex="-1" aria-labelledby="saveReportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="saveReportModalLabel">Save Current View as Report</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {% if current_filters %}
+                        <div class="alert alert-info">
+                            <strong>Current Filters:</strong>
+                            {% for key, value in current_filters.items %}
+                                <span class="badge bg-secondary me-1">{{ key }}: {{ value }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <strong>No filters applied.</strong> This will save the default view.
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="{{ save_report_form.name.id_for_label }}" class="form-label">{{ save_report_form.name.label }}</label>
+                        {{ save_report_form.name }}
+                        {% if save_report_form.name.errors %}
+                            <div class="text-danger">{{ save_report_form.name.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ save_report_form.description.id_for_label }}" class="form-label">{{ save_report_form.description.label }}</label>
+                        {{ save_report_form.description }}
+                        {% if save_report_form.description.errors %}
+                            <div class="text-danger">{{ save_report_form.description.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Visibility</label>
+                        {% for choice in save_report_form.visibility %}
+                            <div class="form-check">
+                                {{ choice.tag }}
+                                <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                    {{ choice.choice_label }}
+                                    {% if choice.choice_value == 'personal' %}
+                                        <small class="text-muted">- Only you can see this report</small>
+                                    {% elif choice.choice_value == 'role' %}
+                                        <small class="text-muted">- Selected groups can see this report</small>
+                                    {% elif choice.choice_value == 'global' %}
+                                        <small class="text-muted">- Everyone can see this report</small>
+                                    {% endif %}
+                                </label>
+                            </div>
+                        {% endfor %}
+                        {% if save_report_form.visibility.errors %}
+                            <div class="text-danger">{{ save_report_form.visibility.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3" id="group-selection" style="display: none;">
+                        <label class="form-label">Select Groups</label>
+                        <div class="form-check-group" style="max-height: 150px; overflow-y: auto;">
+                            {% for choice in save_report_form.allowed_groups %}
+                                <div class="form-check">
+                                    {{ choice.tag }}
+                                    <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                        {{ choice.choice_label }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if save_report_form.allowed_groups.errors %}
+                            <div class="text-danger">{{ save_report_form.allowed_groups.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    {{ save_report_form.view_name }}
+                    {{ save_report_form.filter_params }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="save_report" class="btn btn-primary">
+                        <i class="bi bi-floppy"></i> Save Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleGroupSelection() {
+    const visibilityRadios = document.querySelectorAll('input[name="visibility"]');
+    const groupSelection = document.getElementById('group-selection');
+
+    visibilityRadios.forEach(radio => {
+        if (radio.checked && radio.value === 'role') {
+            groupSelection.style.display = 'block';
+        } else if (radio.checked) {
+            groupSelection.style.display = 'none';
+        }
+    });
+}
+
+// Initialize on page load and add event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    toggleGroupSelection();
+
+    // Add event listeners to visibility radio buttons
+    const visibilityRadios = document.querySelectorAll('input[name="visibility"]');
+    visibilityRadios.forEach(radio => {
+        radio.addEventListener('change', toggleGroupSelection);
+    });
+});
+</script>

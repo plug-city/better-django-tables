@@ -1,0 +1,46 @@
+<div id="bulk-actions" class="bulk-actions d-none mb-3">
+    <div class="d-flex align-items-center gap-2">
+        <span class="text-muted">
+            <span id="selected-count">0</span> item(s) selected
+        </span>
+        {% if bulk_delete_url_name %}
+        <button type="button"
+                class="btn btn-danger btn-sm"
+                id="bulk-delete-btn"
+                data-bs-toggle="modal"
+                data-bs-target="#bulkDeleteModal"
+                data-bulk-delete-url="{% url bulk_delete_url_name %}"
+                title="Delete Selected">
+            <i class="bi bi-trash"></i> Delete Selected
+        </button>
+        {% endif %}
+        <button type="button" class="btn btn-secondary btn-sm" id="clear-selection">
+            Clear Selection
+        </button>
+    </div>
+</div>
+
+<!-- Bulk Delete Modal -->
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bulkDeleteModalLabel">Confirm Bulk Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong><span id="bulk-delete-count">0</span></strong> selected item(s)?</p>
+                <p class="text-muted">The following items will be deleted:</p>
+                <ul id="bulk-delete-items" class="list-unstyled"></ul>
+                <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="bulk-delete-form" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Selected</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

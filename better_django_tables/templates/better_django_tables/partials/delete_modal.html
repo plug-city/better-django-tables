@@ -1,0 +1,52 @@
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="deleteModalLabel">Confirm Delete</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>{{ delete_confirm_message }}</p>
+                <p><strong>Item:</strong> <span id="deleteItemName" class="text-muted"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" id="redirectUrl" value="{{ request.get_full_path }}">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteModal = document.getElementById('deleteModal');
+    if (deleteModal) {
+        deleteModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const deleteUrl = button.getAttribute('data-delete-url');
+            const itemName = button.getAttribute('data-item-name');
+            const redirectUrl = button.getAttribute('data-redirect-url') || window.location.href;
+
+            const form = deleteModal.querySelector('#deleteForm');
+            const itemNameSpan = deleteModal.querySelector('#deleteItemName');
+            const redirectInput = deleteModal.querySelector('#redirectUrl');
+
+            if (form && deleteUrl) {
+                form.action = deleteUrl;
+            }
+            if (itemNameSpan && itemName) {
+                itemNameSpan.textContent = itemName;
+            }
+            if (redirectInput) {
+                redirectInput.value = redirectUrl;
+            }
+        });
+    }
+});
+</script>

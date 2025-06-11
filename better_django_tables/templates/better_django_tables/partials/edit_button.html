@@ -1,0 +1,5 @@
+<a href="{{ record.get_absolute_url }}?next={{ request.get_full_path|urlencode }}"
+   class="{{ table.edit_button_class|default:'text-primary' }}"
+   title="{{ table.edit_column_title|default:'Edit' }}">
+    <i class="{{ table.edit_icon_class|default:'bi bi-pencil-square' }}"></i>
+</a>

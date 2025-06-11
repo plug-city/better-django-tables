@@ -1,0 +1,32 @@
+{% if filter %}
+<!-- Toggle button for sidebar -->
+  <div class="mb-2">
+    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterSidebar" aria-expanded="true" aria-controls="filterSidebar">
+      Toggle Filters
+    </button>
+  </div>
+
+
+  <nav id="filterSidebar" class="col-md-3 col-lg-2 bg-light sidebar collapse show">
+    <div class="position-sticky pt-3">
+      <form action="" method="get" class="form">
+      <h5>Filters</h5>
+      {% for field in filter.form.visible_fields %}
+        {% if field.name != 'search' %}
+        <div class="mb-2">
+          {{ field.label_tag }}{{ field }}
+        </div>
+        {% endif %}
+      {% endfor %}
+      <button type="submit" class="btn btn-primary btn-sm mt-2">Filter</button>
+      {% for field in filter.form.hidden_fields %}
+          {{ field }}
+      {% endfor %}
+      {# Also keep the search value as a hidden field #}
+      {% if filter.form.search.value %}
+          <input type="hidden" name="search" value="{{ filter.form.search.value }}">
+      {% endif %}
+      </form>
+    </div>
+  </nav>
+{% endif %}

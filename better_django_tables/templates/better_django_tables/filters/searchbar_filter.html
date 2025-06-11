@@ -1,0 +1,17 @@
+{% if filter.form.search %}
+  <form method="get" class="">
+  <div class="input-group">
+    {{ filter.form.search }}
+    <button class="btn btn-primary btn-sm" type="submit">Search</button>
+  </div>
+  {# Keep other filter params in the querystring #}
+  {% for field in filter.form.hidden_fields %}
+    {{ field }}
+  {% endfor %}
+  {% for field in filter.form.visible_fields %}
+    {% if field.name != 'search' %}
+    {{ field.as_hidden }}
+    {% endif %}
+  {% endfor %}
+  </form>
+{% endif %}

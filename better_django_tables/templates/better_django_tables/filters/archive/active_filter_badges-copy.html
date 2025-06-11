@@ -1,0 +1,43 @@
+{% load querystring from django_tables2 %}
+      <!-- Active Filters Display -->
+      {% if filter %}
+        <div class="mb-3">
+          {% for field in filter.form.visible_fields %}
+            {% if field.value and field.name != 'search' %}
+              {% if field.value|length > 0 %}
+                {% if field.value|join:"|" %}
+                  <span class="badge bg-secondary me-1 mb-1">
+                    {{ field.label }}: {{ field.value }}
+                    <a href="{% querystring field.name='' %}" class="text-white text-decoration-none ms-1">
+                      <i class="bi bi-x"></i>
+                    </a>
+                  </span>
+                {% endif %}
+              {% else %}
+                <span class="badge bg-secondary me-1 mb-1">
+                  {{ field.label }}: {{ field.value }}
+                  <a href="{% querystring field.name='' %}" class="text-white text-decoration-none ms-1">
+                    <i class="bi bi-x"></i>
+                  </a>
+                </span>
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+
+          {% if filter.form.search.value %}
+            <span class="badge bg-secondary me-1 mb-1">
+              Search: "{{ filter.form.search.value }}"
+              <a href="{% querystring 'search'='' %}" class="text-white text-decoration-none ms-1">
+                <i class="bi bi-x"></i>
+              </a>
+            </span>
+          {% endif %}
+
+          <!-- Clear all filters button - show once if any filters are active -->
+          {% if filter.data %}
+            <a href="?" class="btn btn-outline-secondary btn-sm ms-2">
+              <i class="bi bi-funnel"></i> Clear All Filters
+            </a>
+          {% endif %}
+        </div>
+      {% endif %}
