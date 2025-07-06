@@ -49,8 +49,8 @@
 
           <!-- Create URL -->
           <div class="col-auto">
-            {% if table.create_url %}
-              <a href="{% url table.create_url %}" class="btn btn-success btn-sm" role="button" aria-pressed="true">
+            {% if table.add_create_button %}
+              <a href="{% url table.create_url %}" class="btn btn-outline-primary btn-sm" role="button" aria-pressed="true">
                 <i class="bi bi-plus-lg"></i> {% if table.create_url_label %}{{table.create_url_label}}{% else %}New Record{% endif %}
               </a>
             {% endif %}

@@ -211,6 +211,7 @@ class CreateTableMixin:
 
     def __init__(self, *args, add_create_button=None, **kwargs):
         super().__init__(*args, **kwargs)
+        print(f'{add_create_button=}')
         if add_create_button is not None:
             self.add_create_button = add_create_button
         if not getattr(self, 'add_create_button', True):
