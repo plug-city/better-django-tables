@@ -17,7 +17,7 @@ class Report(models.Model):
     view_name = models.CharField(max_length=100)
     filter_params = models.JSONField()  # Store the filter parameters
     visibility = models.CharField(max_length=10, choices=VISIBILITY_CHOICES)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bdt_reports_created')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
@@ -26,7 +26,8 @@ class Report(models.Model):
     allowed_groups = models.ManyToManyField(
         'auth.Group',
         blank=True,
-        help_text="Groups that can access this report (only for group-based reports)"
+        help_text="Groups that can access this report (only for group-based reports)",
+        related_name='bdt_reports'
     )
 
     # For summary reports (optional)
@@ -59,7 +60,11 @@ class Report(models.Model):
 
 class ReportFavorite(models.Model):
     """Track user's favorite reports"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+            User,
+            on_delete=models.CASCADE,
+            related_name='bdt_report_favorites'
+        )
     report = models.ForeignKey(Report, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
