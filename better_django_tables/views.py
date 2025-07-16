@@ -20,8 +20,27 @@ from better_django_tables import models, filters, tables
 class TableView(NextViewMixin, ActiveFilterMixin, BulkActionViewMixin,
                 ReportableViewMixin, SingleTableMixin, FilterView):
     """
-    Base view for displaying tables with common functionality.
-    Inherits from BaseViewMixin, ActiveFilterMixin, BulkActionViewMixin, and ReportableViewMixin.
+    TableView is a reusable base class for Django views that display tabular data using django-tables2 and django-filter.
+
+    Usage:
+        Subclass TableView and specify at least `table_class` and `model` or `queryset`.
+        Optionally override methods or add mixins for custom behavior.
+
+    Attributes to define in subclasses:
+        table_class: The django-tables2 Table class to use for rendering.
+        model: The Django model to use for the queryset (optional if queryset is provided).
+        queryset: The queryset to display in the table (optional if model is provided).
+        filterset_class: The django-filter FilterSet class for filtering (optional).
+        template_name: The template to use for rendering the view (optional).
+        bulk_delete_url_name: The URL name for bulk delete actions (optional).
+
+    Methods to override in subclasses:
+        get_queryset(self): Return the queryset for the table.
+        get_table_class(self): Return the table class to use.
+        get_context_data(self, **kwargs): Add extra context to the template.
+        post(self, request, *args, **kwargs): Handle POST requests (bulk actions, etc).
+
+    The `post` method is overridden to handle both report actions and bulk actions in a single endpoint.
     """
 
     def post(self, request, *args, **kwargs):
@@ -105,6 +124,9 @@ class HtmxTableView(NextViewMixin, BulkActionViewMixin, SingleTableMixin, Filter
     Inherits from NextViewMixin, BulkActionViewMixin, SingleTableMixin, and FilterView.
     """
     template_name = 'better_django_tables/tables/htmx_table_view.html'
+    show_new_record = False
+    show_table_name = True
+    table_pagination = False
 
     def get(self, request, *args, **kwargs):
         try:
@@ -120,3 +142,8 @@ class HtmxTableView(NextViewMixin, BulkActionViewMixin, SingleTableMixin, Filter
         # Handle bulk actions
         return self.handle_bulk_action(request)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['show_new_record'] = self.show_new_record
+        context['show_table_name'] = self.show_table_name
+        return context
