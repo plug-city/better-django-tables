@@ -1,6 +1,9 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import DetailView, DeleteView
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+
 from django_filters.views import FilterView
 from django_tables2 import SingleTableMixin
 
@@ -94,3 +97,26 @@ class ReportDeleteView(LoginRequiredMixin, DeleteView):
         if user.has_perm('better_django_tables.delete_report'):
             return models.Report.objects.all()
         return models.Report.objects.filter(created_by=user)
+
+
+class HtmxTableView(NextViewMixin, BulkActionViewMixin, SingleTableMixin, FilterView):
+    """
+    HTMX-enabled table view for dynamic updates.
+    Inherits from NextViewMixin, BulkActionViewMixin, SingleTableMixin, and FilterView.
+    """
+    template_name = 'better_django_tables/tables/htmx_table_view.html'
+
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except Exception as e:
+            error_html = render_to_string(
+                'better_django_tables/partials/error_htmx_table.html',
+                {'error': str(e)}
+            )
+            return HttpResponse(error_html, status=500)
+
+    def post(self, request, *args, **kwargs):
+        # Handle bulk actions
+        return self.handle_bulk_action(request)
+
