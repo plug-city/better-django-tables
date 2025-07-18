@@ -149,7 +149,7 @@ class BulkActionViewMixin:
     def handle_bulk_action(self, request):
         """Handle bulk action POST requests."""
         selected_items = request.POST.getlist('selected_items')
-
+        print(f"Selected items: {selected_items}")
         if not selected_items:
             messages.error(request, "No items were selected.")
             return self.get(request)
@@ -183,7 +183,7 @@ class BulkActionViewMixin:
 
         except Exception as e:
             messages.error(request, f"Error deleting items: {str(e)}")
-
+            print(f"{e}")
         # Redirect to the same page to prevent re-submission
         return redirect(request.path)
 

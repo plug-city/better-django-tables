@@ -50,7 +50,7 @@ class DeletableTableMixin:
         <button type="button"
                 class="btn btn-danger btn-sm"
                 data-bs-toggle="modal"
-                data-bs-target="#deleteModal"
+                data-bs-target="#deleteModalBdt"
                 data-delete-url="{% url "''' + cls.delete_url_name + '''" record.pk %}"
                 data-item-name="{{ record }}"
                 title="Delete">

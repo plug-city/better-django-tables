@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
+function setupBulkActions() {
     const selectAllCheckbox = document.getElementById('select-all');
     const individualCheckboxes = document.querySelectorAll('.select-item');
     const bulkActions = document.getElementById('bulk-actions');
@@ -76,4 +76,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+}
+
+document.addEventListener('DOMContentLoaded', setupBulkActions);
+document.addEventListener('htmx:afterSwap', function(evt) {
+    setupBulkActions();
 });
+

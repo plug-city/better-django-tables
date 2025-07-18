@@ -1,4 +1,5 @@
-<div id="bulk-actions" class="bulk-actions d-none mb-3">
+<!-- Bulk Actions -->
+<div id="bulk-actions" class="bulk-actions d-none mb-2">
     <div class="d-flex align-items-center gap-2">
         <span class="text-muted">
             <span id="selected-count">0</span> item(s) selected
@@ -36,7 +37,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="bulk-delete-form" method="post" style="display: inline;">
+                <form id="bulk-delete-form" method="post" action="{% url bulk_delete_url_name %}" style="display: inline;">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-danger">Delete Selected</button>
                 </form>
