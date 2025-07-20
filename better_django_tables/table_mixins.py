@@ -59,8 +59,29 @@ class DeletableTableMixin:
         '''
 
 
+class TableIdMixin:
+    """
+    Mixin for django-tables2 Table classes to add a unique ID to each table instance.
+    This is useful for targeting specific tables in JavaScript or CSS.
+    Usage:
+        class MyTable(TableIdMixin, tables.Table):
+            table_id = "my_table_id"
 
-class BulkActionTableMixin:
+            class Meta:
+                model = MyModel
+                fields = ("field1", "field2")
+    """
+    table_id: str = None  # Override in your table or set as class attribute
+
+    def __init__(self, *args, table_id=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if table_id is not None:
+            self.table_id = table_id
+        if not self.table_id:
+            self.table_id = f"{self.__class__.__name__.lower()}-table"
+
+
+class BulkActionTableMixin(TableIdMixin):
     """
     Mixin for django-tables2 Table classes to add bulk selection with checkboxes and actions.
     Usage:
@@ -72,8 +93,8 @@ class BulkActionTableMixin:
                 fields = ("select", "field1", "field2")
     """
     bulk_delete_url_name = None
-    select_all_checkbox_id = "select-all"
-    individual_checkbox_class = "select-item"
+    select_all_checkbox_id = None
+    individual_checkbox_class = None
     is_bulk_action_table = True  # Toggle this to enable/disable the bulk action column
 
     def __new__(cls, *args, **kwargs):
@@ -82,7 +103,7 @@ class BulkActionTableMixin:
         # Only add the column once per class, not per instance
         if 'select' not in cls.base_columns:
             cls.base_columns['select'] = tables.TemplateColumn(
-                template_code=cls.get_checkbox_template(),
+                template_code='TEMP',  # Will be set in __init__
                 orderable=False,
                 verbose_name=cls.get_select_all_checkbox(),
                 attrs={'td': {'class': 'text-center'}, 'th': {'class': 'text-center'}},
@@ -108,17 +129,45 @@ class BulkActionTableMixin:
                 if 'select' in seq:
                     seq.remove('select')
                 self.sequence = ['select'] + seq
+        if self.select_all_checkbox_id is None:
+            self.select_all_checkbox_id = f"select-all-{self.table_id}"
+        if self.individual_checkbox_class is None:
+            self.individual_checkbox_class = f"select-item-{self.table_id}"
+        # # Update the checkbox template for the actual column instance
+        # if 'select' in self.columns:
+        #     select_col = self.columns['select']
+        #     select_col.template_code = self.get_checkbox_template().format(
+        #         checkbox_class=self.individual_checkbox_class
+        #     )
+        if not hasattr(self, 'attrs'):
+            self.attrs = {}
+        existing_classes = self.attrs.get('class', '')
+        self.attrs['class'] = f"{existing_classes} bulk-actions-table".strip()
+        if not hasattr(self, 'attrs'):
+            self.attrs = {}
+        self.attrs['id'] = self.table_id
+        self.attrs.setdefault('id', self.table_id)
 
-    @classmethod
-    def get_checkbox_template(cls):
+    # def get_checkbox_template(self):
+    #     """Return the template code for individual row checkboxes."""
+    #     return f'''
+    #     <input type="checkbox"
+    #            class="{self.individual_checkbox_class}"
+    #            name="selected_items"
+    #            value="{{{{ record.pk }}}}"
+    #            data-item-name="{{{{ record }}}}">
+    #     '''
+
+    def render_select(self, record):
         """Return the template code for individual row checkboxes."""
-        return f'''
-        <input type="checkbox"
-               class="{cls.individual_checkbox_class}"
+        return format_html('''<input type="checkbox"
+               class="{}"
                name="selected_items"
-               value="{{{{ record.pk }}}}"
-               data-item-name="{{{{ record }}}}">
-        '''
+               value="{}"
+               data-item-name="{}">''',
+               self.individual_checkbox_class,
+               record.pk,
+               record)
 
     @classmethod
     def get_select_all_checkbox(cls):
@@ -239,3 +288,19 @@ class TableNameMixin:
             self.table_name = self.__class__.__name__
 
 
+class BootstrapTableMixin:
+    """
+    Mixin for django-tables2 Table classes to add Bootstrap 5 classes to the table.
+    Usage:
+        class MyTable(Bootstrap5TableMixin, tables.Table):
+            ...
+    """
+    bootstrap_table_class = "table table-sm"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        print('Setting Bootstrap classes on the table')
+        # Set Bootstrap classes on the table
+        if not hasattr(self, 'attrs'):
+            self.attrs = {}
+        self.attrs.setdefault("class", self.bootstrap_table_class)

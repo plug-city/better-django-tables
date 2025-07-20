@@ -10,11 +10,12 @@ from better_django_tables.table_mixins import (
     EditableTableMixin,
     CreateTableMixin,
     TableNameMixin,
+    BootstrapTableMixin,
 )
 
 
 class TableMixin(DeletableTableMixin, BulkActionTableMixin, EditableTableMixin, CreateTableMixin,
-            TableNameMixin):
+            TableNameMixin, BootstrapTableMixin):
     """
     Base table class with common
     functionality for deletion, bulk actions, and editing.

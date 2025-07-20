@@ -1,28 +1,27 @@
 <!-- Bulk Actions -->
-<div id="bulk-actions" class="bulk-actions d-none mb-2">
+<div id="bulk-actions-{{ table.table_id }}" class="bulk-actions d-none mb-2">
     <div class="d-flex align-items-center gap-2">
         <span class="text-muted">
-            <span id="selected-count">0</span> item(s) selected
+            <span id="selected-count-{{ table.table_id }}">0</span> item(s) selected
         </span>
         {% if bulk_delete_url_name %}
         <button type="button"
                 class="btn btn-danger btn-sm"
-                id="bulk-delete-btn"
+                id="bulk-delete-btn-{{ table.table_id }}"
                 data-bs-toggle="modal"
-                data-bs-target="#bulkDeleteModal"
+                data-bs-target="#bulkDeleteModal-{{ table.table_id }}"
                 data-bulk-delete-url="{% url bulk_delete_url_name %}"
                 title="Delete Selected">
             <i class="bi bi-trash"></i> Delete Selected
         </button>
         {% endif %}
-        <button type="button" class="btn btn-secondary btn-sm" id="clear-selection">
+        <button type="button" class="btn btn-secondary btn-sm" id="clear-selection-{{ table.table_id }}">
             Clear Selection
         </button>
     </div>
 </div>
-
 <!-- Bulk Delete Modal -->
-<div class="modal fade" id="bulkDeleteModal" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">
+<div class="modal fade" id="bulkDeleteModal-{{table.table_id}}" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -37,6 +36,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <input type="hidden" name="next" id="redirectUrl" value="{{ request.get_full_path }}">
                 <form id="bulk-delete-form" method="post" action="{% url bulk_delete_url_name %}" style="display: inline;">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-danger">Delete Selected</button>

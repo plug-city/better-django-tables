@@ -188,6 +188,19 @@ class BulkActionViewMixin:
         return redirect(request.path)
 
 
+    # def get_table_kwargs(self):
+    #     kwargs = super().get_table_kwargs()
+    #     attrs = kwargs.get('attrs', {}).copy()
+    #     print(f'Pre attributes: {attrs}')  # Debug
+    #     existing_classes = attrs.get('class', '')
+    #     print(f'Existing classes: {existing_classes}')
+    #     # Add 'bulk-actions-table' without removing existing classes
+    #     attrs['class'] = f"{existing_classes} bulk-actions-table".strip()
+    #     print(f'Updated attributes: {attrs}')  # Debug
+    #     kwargs['attrs'] = attrs
+    #     return kwargs
+
+
 class ReportableViewMixin:
     """
     Mixin to add report saving/loading functionality to FilterViews
@@ -412,3 +425,22 @@ class BetterMultiTableMixin(TableMixinBase):
 #         context['create_url_label'] = self.create_url_label
 #         return context
 
+
+# class BootstrapTableMixin:
+#     """
+#     Mixin to apply Bootstrap classes to django-tables2 tables.
+#     This mixin should be used with django-tables2 Table classes.
+#     """
+#     table_classes = "table table-sm"
+
+#     def get_table_kwargs(self):
+#         kwargs = super().get_table_kwargs()
+#         attrs = kwargs.get('attrs', {}).copy()
+#         print(f'Pre attributes: {attrs}')  # Debug
+#         existing_classes = attrs.get('class', '')
+#         print(f'Existing classes: {existing_classes}')
+#         # Add 'bulk-actions-table' without removing existing classes
+#         attrs['class'] = f"{existing_classes} bulk-actions-table".strip()
+#         print(f'Updated attributes: {attrs}')  # Debug
+#         kwargs['attrs'] = attrs
+#         return kwargs
