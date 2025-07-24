@@ -1,9 +1,11 @@
 import urllib.parse
 
 from django.db import models
-from django.contrib.auth.models import User
+# from django.contrib.auth.models import User
 from django.urls import reverse
+from django.contrib.auth import get_user_model
 
+# User = get_user_model()
 
 class Report(models.Model):
     VISIBILITY_CHOICES = [
@@ -17,7 +19,7 @@ class Report(models.Model):
     view_name = models.CharField(max_length=100)
     filter_params = models.JSONField()  # Store the filter parameters
     visibility = models.CharField(max_length=10, choices=VISIBILITY_CHOICES)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bdt_reports_created')
+    created_by = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='bdt_reports_created')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
@@ -46,7 +48,7 @@ class Report(models.Model):
         base_url = reverse(self.view_name)
         return f"{base_url}?{params}"
 
-    def user_can_access(self, user: User):
+    def user_can_access(self, user):
         """Check if a user can access this report"""
         if self.visibility == 'personal':
             return self.created_by == user
@@ -61,7 +63,7 @@ class Report(models.Model):
 class ReportFavorite(models.Model):
     """Track user's favorite reports"""
     user = models.ForeignKey(
-            User,
+            'users.User',
             on_delete=models.CASCADE,
             related_name='bdt_report_favorites'
         )

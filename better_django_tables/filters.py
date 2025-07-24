@@ -1,11 +1,14 @@
 import django_filters
 from django_filters.widgets import RangeWidget, BooleanWidget
-from django.contrib.auth.models import User
+# from django.contrib.auth.models import User
 from django import forms
 from django.db.models import Q
 from django.contrib.auth.models import Group
+from django.contrib.auth import get_user_model
 
 from better_django_tables import models
+
+# User = get_user_model()
 
 
 class ReportFilter(django_filters.FilterSet):
@@ -34,7 +37,7 @@ class ReportFilter(django_filters.FilterSet):
     )
 
     created_by = django_filters.ModelChoiceFilter(
-        queryset=User.objects.all(),
+        queryset=None,
         widget=forms.Select(attrs={'class': 'form-select'}),
         label='Created By'
     )
@@ -89,6 +92,9 @@ class ReportFilter(django_filters.FilterSet):
     def __init__(self, *args, **kwargs):
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
+
+        User = get_user_model()
+        self.filters['created_by'].queryset = User.objects.all()
 
         # Filter created_by to only show users who have created reports
         if User.objects.filter(report__isnull=False).exists():

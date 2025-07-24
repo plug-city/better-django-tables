@@ -4,13 +4,13 @@
         <span class="text-muted">
             <span id="selected-count-{{ table.table_id }}">0</span> item(s) selected
         </span>
-        {% if bulk_delete_url_name %}
+        {% if table.bulk_delete_url_name %}
         <button type="button"
                 class="btn btn-danger btn-sm"
                 id="bulk-delete-btn-{{ table.table_id }}"
                 data-bs-toggle="modal"
                 data-bs-target="#bulkDeleteModal-{{ table.table_id }}"
-                data-bulk-delete-url="{% url bulk_delete_url_name %}"
+                data-bulk-delete-url="{% url table.bulk_delete_url_name %}"
                 title="Delete Selected">
             <i class="bi bi-trash"></i> Delete Selected
         </button>
@@ -37,7 +37,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <input type="hidden" name="next" id="redirectUrl" value="{{ request.get_full_path }}">
-                <form id="bulk-delete-form" method="post" action="{% url bulk_delete_url_name %}" style="display: inline;">
+                <form id="bulk-delete-form" method="post" action="{% url table.bulk_delete_url_name %}" style="display: inline;">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-danger">Delete Selected</button>
                 </form>

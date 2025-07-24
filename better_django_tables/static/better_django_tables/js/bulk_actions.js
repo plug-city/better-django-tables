@@ -1,7 +1,6 @@
 function setupBulkActions() {
     // Find all tables and process each one separately
     const tables = document.querySelectorAll('.bulk-actions-table');
-    console.log(`Found ${tables.length} tables for bulk actions setup.`);
 
     tables.forEach(table => {
         const tableId = table.id;
@@ -14,16 +13,6 @@ function setupBulkActions() {
         const clearSelectionBtn = bulkActions ? bulkActions.querySelector(`#clear-selection-${tableId}`) : null;
         const bulkDeleteBtn = bulkActions ? bulkActions.querySelector(`#bulk-delete-btn-${tableId}`) : null;
         const bulkDeleteModal = document.getElementById(`bulkDeleteModal-${tableId}`);
-        console.log(`Processing table with ID: ${tableId}`);
-        console.log('table:', table);
-        console.log('Setting up bulk actions for table:', tableId);
-        console.log('individualCheckboxes:', individualCheckboxes);
-        console.log('selectAllCheckbox:', selectAllCheckbox);
-        console.log('bulkActions:', bulkActions);
-        console.log('selectedCountSpan:', selectedCountSpan);
-        console.log('clearSelectionBtn:', clearSelectionBtn);
-        console.log('bulkDeleteBtn:', bulkDeleteBtn);
-        console.log('bulkDeleteModal:', bulkDeleteModal);
 
         // Skip if essential elements aren't found
         if (!selectAllCheckbox || !individualCheckboxes.length) return;
