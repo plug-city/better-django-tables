@@ -1,0 +1,20 @@
+{% comment %}
+Test template for render_row functionality
+Usage example:
+
+In your view:
+    table = MyTable(MyModel.objects.all())
+    updated_record = MyModel.objects.get(pk=some_pk)
+
+In your template:
+    {% load better_django_tables %}
+    {% render_row table updated_record %}
+
+This will render just the single <tr> element for the updated record,
+which can be used with HTMX to replace a specific row in a table.
+{% endcomment %}
+
+{% load better_django_tables %}
+
+<!-- Example usage: -->
+<!-- {% render_row table record %} -->

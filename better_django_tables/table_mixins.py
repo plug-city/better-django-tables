@@ -299,7 +299,6 @@ class BootstrapTableMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        print('Setting Bootstrap classes on the table')
         # Set Bootstrap classes on the table
         if not hasattr(self, 'attrs'):
             self.attrs = {}

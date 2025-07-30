@@ -147,3 +147,46 @@ class HtmxTableView(NextViewMixin, BulkActionViewMixin, SingleTableMixin, Filter
         context['show_new_record'] = self.show_new_record
         context['show_table_name'] = self.show_table_name
         return context
+
+
+class RenderRowMixin:
+    """
+    Mixin to render a single row of a table using HTMX.
+    This is useful for updating a specific row without reloading the entire table.
+    """
+    row_template_name = 'better_django_tables/partials/row.html'
+
+    def render_row(self, record, table_class=None) -> HttpResponse:
+        """ Render a single row of the table for HTMX updates.
+        Args:
+            record: The record to render.
+            table_class: Optional table class to use for rendering.
+        Returns:
+            HttpResponse with the rendered row HTML.
+        """
+        if not table_class:
+            table_class = self.get_table_class()
+        table = table_class([record])
+        context = self.get_context_data(record=record, table=table)
+        html = render_to_string(self.row_template_name, context, request=self.request)
+        return HttpResponse(html)
+
+    def get_context_data(self, **kwargs) -> dict:
+        # Safely call super() if it exists
+        if hasattr(super(), 'get_context_data'):
+            context = super().get_context_data(**kwargs)
+        else:
+            context = kwargs.copy()
+
+        context["record"] = kwargs.get("record")
+        context["table"] = kwargs.get("table")
+        return context
+
+    def get_table_class(self):
+        """
+        Return the table class to use for rendering the row.
+        This can be overridden in subclasses to provide a specific table class.
+        """
+        if hasattr(self, 'table_class'):
+            return self.table_class
+        raise NotImplementedError("Subclasses must define a table_class attribute.")
