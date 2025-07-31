@@ -1,8 +1,8 @@
+from django.shortcuts import render
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import DetailView, DeleteView
 from django.http import HttpResponse
-from django.template.loader import render_to_string
 
 from django_filters.views import FilterView
 from django_tables2 import SingleTableMixin
@@ -132,11 +132,8 @@ class HtmxTableView(NextViewMixin, BulkActionViewMixin, SingleTableMixin, Filter
         try:
             return super().get(request, *args, **kwargs)
         except Exception as e:
-            error_html = render_to_string(
-                'better_django_tables/partials/error_htmx_table.html',
-                {'error': str(e)}
-            )
-            return HttpResponse(error_html, status=500)
+            return render(request, 'better_django_tables/partials/error_htmx_table.html',
+                          {'error': str(e)}, status=500)
 
     def post(self, request, *args, **kwargs):
         # Handle bulk actions
@@ -168,8 +165,7 @@ class RenderRowMixin:
             table_class = self.get_table_class()
         table = table_class([record])
         context = self.get_context_data(record=record, table=table)
-        html = render_to_string(self.row_template_name, context, request=self.request)
-        return HttpResponse(html)
+        return render(self.request, self.row_template_name, context)
 
     def get_context_data(self, **kwargs) -> dict:
         # Safely call super() if it exists
@@ -177,7 +173,6 @@ class RenderRowMixin:
             context = super().get_context_data(**kwargs)
         else:
             context = kwargs.copy()
-
         context["record"] = kwargs.get("record")
         context["table"] = kwargs.get("table")
         return context

@@ -145,6 +145,11 @@ class BulkActionViewMixin:
     #         raise ImproperlyConfigured(f"No bulk delete URL name specified. Define {view_name}.bulk_delete_url_name")
     #     context['bulk_delete_url_name'] = self.bulk_delete_url_name
     #     return context
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['redirect_url'] = self.request.GET.get('next', self.request.path)
+        return context
+
 
     def handle_bulk_action(self, request):
         """Handle bulk action POST requests."""
@@ -169,36 +174,20 @@ class BulkActionViewMixin:
             model = getattr(self, 'model', None)
             if not model:
                 raise ValueError("Model not specified")
-
             # Delete selected items
             deleted_count, _ = model.objects.filter(pk__in=selected_items).delete()
-
             if deleted_count > 0:
-                messages.success(
+                messages.warning(
                     request,
-                    f"Successfully deleted {deleted_count} item(s)."
+                    f"Successfully deleted {deleted_count} {model._meta.verbose_name}(s)."
                 )
             else:
                 messages.warning(request, "No items were deleted.")
-
         except Exception as e:
             messages.error(request, f"Error deleting items: {str(e)}")
             print(f"{e}")
         # Redirect to the same page to prevent re-submission
-        return redirect(request.path)
-
-
-    # def get_table_kwargs(self):
-    #     kwargs = super().get_table_kwargs()
-    #     attrs = kwargs.get('attrs', {}).copy()
-    #     print(f'Pre attributes: {attrs}')  # Debug
-    #     existing_classes = attrs.get('class', '')
-    #     print(f'Existing classes: {existing_classes}')
-    #     # Add 'bulk-actions-table' without removing existing classes
-    #     attrs['class'] = f"{existing_classes} bulk-actions-table".strip()
-    #     print(f'Updated attributes: {attrs}')  # Debug
-    #     kwargs['attrs'] = attrs
-    #     return kwargs
+        return redirect(self.get_success_url())
 
 
 class ReportableViewMixin:
