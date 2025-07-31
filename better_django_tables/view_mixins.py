@@ -135,16 +135,7 @@ class BulkActionViewMixin:
             def post(self, request, *args, **kwargs):
                 return self.handle_bulk_action(request)
     """
-    # bulk_delete_url_name = None  # Override in your view or set as class attribute
 
-
-    # def get_context_data(self, **kwargs):
-    #     context = super().get_context_data(**kwargs)
-    #     if self.bulk_delete_url_name is None:
-    #         view_name = type(self).__name__
-    #         raise ImproperlyConfigured(f"No bulk delete URL name specified. Define {view_name}.bulk_delete_url_name")
-    #     context['bulk_delete_url_name'] = self.bulk_delete_url_name
-    #     return context
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['redirect_url'] = self.request.GET.get('next', self.request.path)
