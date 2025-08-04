@@ -153,7 +153,7 @@ class RenderRowMixin:
     """
     row_template_name = 'better_django_tables/partials/row.html'
 
-    def render_row(self, record, table_class=None) -> HttpResponse:
+    def render_row(self, record, table_class=None, table_kwargs: dict|None=None) -> HttpResponse:
         """ Render a single row of the table for HTMX updates.
         Args:
             record: The record to render.
@@ -163,7 +163,7 @@ class RenderRowMixin:
         """
         if not table_class:
             table_class = self.get_table_class()
-        table = table_class([record])
+        table = table_class([record], **self.get_table_kwargs(**table_kwargs))
         context = self.get_context_data(record=record, table=table)
         return render(self.request, self.row_template_name, context)
 
@@ -185,3 +185,19 @@ class RenderRowMixin:
         if hasattr(self, 'table_class'):
             return self.table_class
         raise NotImplementedError("Subclasses must define a table_class attribute.")
+
+    def get_table_kwargs(self, **kwargs) -> dict:
+        """
+        Return the keyword arguments for instantiating the table.
+
+        Allows passing customized arguments to the table constructor, for example,
+        to remove the buttons column, you could define this method in your View::
+
+            def get_table_kwargs(self):
+                return {
+                    'exclude': ('buttons', )
+                }
+        """
+        if hasattr(self, 'table_kwargs'):
+            kwargs.update(self.table_kwargs)
+        return kwargs or {}
