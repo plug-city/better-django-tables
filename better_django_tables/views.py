@@ -161,6 +161,8 @@ class RenderRowMixin:
         Returns:
             HttpResponse with the rendered row HTML.
         """
+        if table_kwargs is None:
+            table_kwargs = {}
         if not table_class:
             table_class = self.get_table_class()
         table = table_class([record], **self.get_table_kwargs(**table_kwargs))

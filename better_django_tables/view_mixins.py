@@ -145,7 +145,6 @@ class BulkActionViewMixin:
     def handle_bulk_action(self, request):
         """Handle bulk action POST requests."""
         selected_items = request.POST.getlist('selected_items')
-        print(f"Selected items: {selected_items}")
         if not selected_items:
             messages.error(request, "No items were selected.")
             return self.get(request)

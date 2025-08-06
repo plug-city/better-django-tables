@@ -47,15 +47,13 @@ class DeletableTableMixin:
             raise ImproperlyConfigured(f"{cls.__class__.__name__} must define 'delete_url_name' attribute")
 
         return '''
-        <button type="button"
-                class="btn btn-danger btn-sm"
-                data-bs-toggle="modal"
-                data-bs-target="#deleteModalBdt"
-                data-delete-url="{% url "''' + cls.delete_url_name + '''" record.pk %}"
-                data-item-name="{{ record }}"
-                title="Delete">
-            <i class="bi bi-trash"></i>
-        </button>
+        <i class="bi bi-trash text-danger"
+           style="cursor: pointer;"
+           data-bs-toggle="modal"
+           data-bs-target="#deleteModalBdt"
+           data-delete-url="{% url "''' + cls.delete_url_name + '''" record.pk %}"
+           data-item-name="{{ record }}"
+           title="Delete"></i>
         '''
 
 
