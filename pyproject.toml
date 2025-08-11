@@ -9,3 +9,13 @@ dependencies = [
     "django-filter>=25.1",
     "django-tables2>=2.7.5",
 ]
+
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["better_django_tables*"]
+
+[tool.setuptools.package-data]
+better_django_tables = ["templates/**/*", "static/**/*"]
