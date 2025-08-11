@@ -20,6 +20,8 @@
         </button>
     </div>
 </div>
+
+{% if table.bulk_delete_url_name %}
 <!-- Bulk Delete Modal -->
 <div class="modal fade" id="bulkDeleteModal-{{table.table_id}}" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -45,3 +47,4 @@
         </div>
     </div>
 </div>
+{% endif %}
