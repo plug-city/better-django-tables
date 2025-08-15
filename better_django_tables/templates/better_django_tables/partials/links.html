@@ -7,11 +7,11 @@
         {% if link.confirm_message %}
             <button type="submit" class="btn btn-sm {{ link.button_type|default:'btn-primary' }}"
                     onclick="return confirm('{{ link.confirm_message }}');">
-            {{ link.label|default:link.text }}
+            {{ link.label }}
             </button>
         {% else %}
             <button type="submit" class="btn btn-sm {{ link.button_type|default:'btn-primary' }}">
-            {{ link.label|default:link.text }}
+            {{ link.label }}
             </button>
         {% endif %}
         </form>
@@ -22,7 +22,7 @@
             {{ link.label }}
         </a>
         {% else %}
-        <a href="{{ link.url }}">{{ link.text }}</a>
+        <a href="{{ link.url }}">{{ link.label }}</a>
         {% endif %}
     {% endif %}
     {% endfor %}
