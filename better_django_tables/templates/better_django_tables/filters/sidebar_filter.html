@@ -1,13 +1,12 @@
 {% if filter %}
-<!-- Toggle button for sidebar -->
-  <div class="mb-2">
-    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterSidebar" aria-expanded="true" aria-controls="filterSidebar">
+<!-- Toggle button for sidebar (only shown on small screens) -->
+  <div class="mb-2 d-md-none">
+    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterSidebar" aria-expanded="false" aria-controls="filterSidebar">
       Toggle Filters
     </button>
   </div>
 
-
-  <nav id="filterSidebar" class="col-md-3 col-lg-2 bg-light sidebar collapse show">
+  <nav id="filterSidebar" class="col-md-3 col-lg-2 bg-light sidebar collapse d-md-block">
     <div class="position-sticky pt-3">
       <form action="" method="get" class="form">
       <h5>Filters</h5>
