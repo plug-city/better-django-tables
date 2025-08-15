@@ -1,0 +1,29 @@
+<div class='links'>
+    {% for link in links %}
+    {% if link.method|default:"GET"|upper == "POST" %}
+        <!-- POST method: render as form with button -->
+        <form method="post" action="{{ link.url }}" style="display: inline;">
+        {% csrf_token %}
+        {% if link.confirm_message %}
+            <button type="submit" class="btn btn-sm {{ link.button_type|default:'btn-primary' }}"
+                    onclick="return confirm('{{ link.confirm_message }}');">
+            {{ link.label|default:link.text }}
+            </button>
+        {% else %}
+            <button type="submit" class="btn btn-sm {{ link.button_type|default:'btn-primary' }}">
+            {{ link.label|default:link.text }}
+            </button>
+        {% endif %}
+        </form>
+    {% else %}
+        <!-- GET method (default): render as regular link -->
+        {% if link.label %}
+        <a class="btn btn-sm {{ link.button_type|default:'btn-primary' }}" href="{{ link.url }}">
+            {{ link.label }}
+        </a>
+        {% else %}
+        <a href="{{ link.url }}">{{ link.text }}</a>
+        {% endif %}
+    {% endif %}
+    {% endfor %}
+</div>

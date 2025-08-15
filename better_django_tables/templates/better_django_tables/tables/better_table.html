@@ -13,13 +13,7 @@
     <!-- Main content -->
     <main class="col-12 col-md-9 col-lg-10 px-md-2" style="overflow-x: auto; min-width: 0;">
       {% if links %}
-        <div class='links'>
-          {% for link in links %}
-            <a href="{{ link.url }}">{{ link.text }}</a>
-            <a type="button " class="btn btn-sm {{link.button_type}}" href="{{link.url}}">{{link.label}}</a>
-          {% endfor %}
-        </div>
-        <br>
+      {% include "better_django_tables/partials/links.html" %}
       {% endif %}
 
       <!-- Table Name and Controls Row -->
