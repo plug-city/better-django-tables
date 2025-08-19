@@ -366,10 +366,10 @@ class ActionsColumnMixin:
     actions_template_name = 'better_django_tables/partials/actions_column.html'
 
     def __new__(cls, *args, **kwargs):
-        if not getattr(cls, 'has_actions_column', True):
+        if not getattr(cls, 'has_actions_column'):
             return super().__new__(cls)
 
-        if 'bdjactions' not in cls.base_columns:
+        if 'bdtactions' not in cls.base_columns:
             cls.base_columns['bdtactions'] = tables.TemplateColumn(
                 template_name=cls.actions_template_name,
                 orderable=False,
@@ -378,7 +378,7 @@ class ActionsColumnMixin:
                 attrs={'td': {'class': 'text-center actions-column'}},
             )
             cls.base_columns = collections.OrderedDict(
-                [('bdtactions', cls.base_columns['bdjactions'])] +
+                [('bdtactions', cls.base_columns['bdtactions'])] +
                 [(k, v) for k, v in cls.base_columns.items() if k != 'bdtactions']
             )
         return super().__new__(cls)
