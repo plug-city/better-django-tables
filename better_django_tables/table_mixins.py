@@ -339,7 +339,7 @@ class ActionsColumnMixin:
         'name': 'view',
         'url_name': None,  # Must be set in the table class
         'icon': 'bi bi-eye',
-        'class': 'text-info',
+        'class': 'text-primary',
         'title': 'View',
         'requires_modal': False,
     }
@@ -370,12 +370,16 @@ class ActionsColumnMixin:
             return super().__new__(cls)
 
         if 'actions' not in cls.base_columns:
-            cls.base_columns['actions'] = tables.TemplateColumn(
+            cls.base_columns['bdtactions'] = tables.TemplateColumn(
                 template_name=cls.actions_template_name,
                 orderable=False,
                 verbose_name=cls.actions_column_verbose_name,
                 empty_values=(),
                 attrs={'td': {'class': 'text-center actions-column'}},
+            )
+            cls.base_columns = collections.OrderedDict(
+                [('bdtactions', cls.base_columns['bdjactions'])] +
+                [(k, v) for k, v in cls.base_columns.items() if k != 'bdtactions']
             )
         return super().__new__(cls)
 
@@ -389,6 +393,14 @@ class ActionsColumnMixin:
 
         # Build the list of enabled actions
         self.enabled_actions = self._get_enabled_actions()
+
+        # If sequence is set, ensure "bdtactions" is first
+        if hasattr(self, 'sequence'):
+            seq = list(self.sequence)
+            if 'bdtactions' in self.base_columns and (not seq or seq[0] != 'bdtactions'):
+                if 'bdtactions' in seq:
+                    seq.remove('bdtactions')
+                self.sequence = ['bdtactions'] + seq
 
     def _get_enabled_actions(self):
         """Return a list of enabled actions with their configuration."""
