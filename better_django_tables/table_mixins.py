@@ -369,7 +369,7 @@ class ActionsColumnMixin:
         if not getattr(cls, 'has_actions_column', True):
             return super().__new__(cls)
 
-        if 'actions' not in cls.base_columns:
+        if 'bdjactions' not in cls.base_columns:
             cls.base_columns['bdtactions'] = tables.TemplateColumn(
                 template_name=cls.actions_template_name,
                 orderable=False,
