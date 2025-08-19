@@ -293,8 +293,11 @@ class ActionsColumnMixin:
     Usage:
         class MyTable(ActionColumnMixin, tables.Table):
             enable_view_action = True
+            view_action_url_name = 'myapp:model_detail'
             enable_edit_action = True
+            edit_action_url_name = 'myapp:model_update'
             enable_delete_action = True
+            delete_action_url_name = 'myapp:model_delete'
             actions = [
                 {
                     'name': 'view',
@@ -327,7 +330,9 @@ class ActionsColumnMixin:
     enable_edit_action = True
     enable_delete_action = True
 
-    actions_url_names = {}
+    view_action_url_name = None
+    edit_action_url_name = None
+    delete_action_url_name = None
 
     # Standard actions
     view_action = {
@@ -407,28 +412,31 @@ class ActionsColumnMixin:
         if self.enable_view_action:
             if self.view_action['url_name'] is None:
                 try:
-                    self.view_action['url_name'] = self.actions_url_names['view']
+                    self.view_action['url_name'] = self.view_action_url_name
                 except KeyError as exc:
                     raise ImproperlyConfigured(
-                        f"{self.__class__.__name__} requires 'view_action' to have a 'url_name' or 'actions_url_names' to be defined."
+                        f"{self.__class__.__name__} requires 'view_action' to have a \
+                              'url_name' or 'view_action_url_name' to be defined."
                     ) from exc
             actions.append(self._normalize_action_config(self.view_action))
         if self.enable_edit_action:
             if self.edit_action['url_name'] is None:
                 try:
-                    self.edit_action['url_name'] = self.actions_url_names['edit']
+                    self.edit_action['url_name'] = self.edit_action_url_name
                 except KeyError as exc:
                     raise ImproperlyConfigured(
-                        f"{self.__class__.__name__} requires 'edit_action' to have a 'url_name' or 'actions_url_names' to be defined."
+                        f"{self.__class__.__name__} requires 'edit_action' to have a \
+                              'url_name' or 'edit_action_url_name' to be defined."
                     ) from exc
             actions.append(self._normalize_action_config(self.edit_action))
         if self.enable_delete_action:
             if self.delete_action['url_name'] is None:
                 try:
-                    self.delete_action['url_name'] = self.actions_url_names['delete']
+                    self.delete_action['url_name'] = self.delete_action_url_name
                 except KeyError as exc:
                     raise ImproperlyConfigured(
-                        f"{self.__class__.__name__} requires 'delete_action' to have a 'url_name' or 'actions_url_names' to be defined."
+                        f"{self.__class__.__name__} requires 'delete_action' to have a \
+                              'url_name' or 'delete_action_url_name' to be defined."
                     ) from exc
             actions.append(self._normalize_action_config(self.delete_action))
         return actions
