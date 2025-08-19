@@ -422,35 +422,41 @@ class ActionsColumnMixin:
     def _add_standard_actions(self, actions: list[dict]) -> list[dict]:
         """Add standard actions to the actions list."""
         if self.enable_view_action:
-            if self.view_action['url_name'] is None:
+            # Create a copy to avoid modifying the class-level dictionary
+            view_action = self.view_action.copy()
+            if view_action['url_name'] is None:
                 try:
-                    self.view_action['url_name'] = self.view_action_url_name
+                    view_action['url_name'] = self.view_action_url_name
                 except KeyError as exc:
                     raise ImproperlyConfigured(
                         f"{self.__class__.__name__} requires 'view_action' to have a \
                               'url_name' or 'view_action_url_name' to be defined."
                     ) from exc
-            actions.append(self._normalize_action_config(self.view_action))
+            actions.append(self._normalize_action_config(view_action))
         if self.enable_edit_action:
-            if self.edit_action['url_name'] is None:
+            # Create a copy to avoid modifying the class-level dictionary
+            edit_action = self.edit_action.copy()
+            if edit_action['url_name'] is None:
                 try:
-                    self.edit_action['url_name'] = self.edit_action_url_name
+                    edit_action['url_name'] = self.edit_action_url_name
                 except KeyError as exc:
                     raise ImproperlyConfigured(
                         f"{self.__class__.__name__} requires 'edit_action' to have a \
                               'url_name' or 'edit_action_url_name' to be defined."
                     ) from exc
-            actions.append(self._normalize_action_config(self.edit_action))
+            actions.append(self._normalize_action_config(edit_action))
         if self.enable_delete_action:
-            if self.delete_action['url_name'] is None:
+            # Create a copy to avoid modifying the class-level dictionary
+            delete_action = self.delete_action.copy()
+            if delete_action['url_name'] is None:
                 try:
-                    self.delete_action['url_name'] = self.delete_action_url_name
+                    delete_action['url_name'] = self.delete_action_url_name
                 except KeyError as exc:
                     raise ImproperlyConfigured(
                         f"{self.__class__.__name__} requires 'delete_action' to have a \
                               'url_name' or 'delete_action_url_name' to be defined."
                     ) from exc
-            actions.append(self._normalize_action_config(self.delete_action))
+            actions.append(self._normalize_action_config(delete_action))
         return actions
 
     def _normalize_action_config(self, config):
