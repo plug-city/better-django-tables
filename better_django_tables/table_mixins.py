@@ -286,6 +286,250 @@ class TableNameMixin:
             self.table_name = self.__class__.__name__
 
 
+class ActionsColumnMixin:
+    """
+    Mixin for django-tables2 Table classes to add an actions column with multiple action buttons.
+
+    Usage:
+        class MyTable(ActionColumnMixin, tables.Table):
+            enable_view_action = True
+            enable_edit_action = True
+            enable_delete_action = True
+            actions = [
+                {
+                    'name': 'view',
+                    'url_name': 'myapp:model_detail',
+                    'icon': 'bi bi-eye',
+                    'class': 'text-info',
+                    'title': 'View',
+                },
+                {
+                    'name': 'edit',
+                    'url_name': 'myapp:model_update',
+                    'url_kwargs': lambda record: {'slug': record.slug},
+                    'icon': 'bi bi-pencil-square',
+                    'class': 'text-primary',
+                    'title': 'Edit',
+                },
+            ]
+
+            class Meta:
+                model = MyModel
+                fields = ("actions", "field1", "field2")
+    """
+    has_actions_column = False  # Toggle this to enable/disable the actions column
+
+    # New structured approach - define actions as a list of dicts
+    actions = []
+
+    # Standard Action Toggles
+    enable_view_action = True
+    enable_edit_action = True
+    enable_delete_action = True
+
+    actions_url_names = {}
+
+    # Standard actions
+    view_action = {
+        'name': 'view',
+        'url_name': None,  # Must be set in the table class
+        'icon': 'bi bi-eye',
+        'class': 'text-info',
+        'title': 'View',
+        'requires_modal': False,
+    }
+    edit_action = {
+        'name': 'edit',
+        'url_name': None,  # Must be set in the table class
+        'icon': 'bi bi-pencil-square',
+        'class': 'text-primary',
+        'title': 'Edit',
+        'requires_modal': False,
+    }
+    delete_action = {
+        'name': 'delete',
+        'url_name': None,  # Must be set in the table class
+        'icon': 'bi bi-trash',
+        'class': 'text-danger',
+        'title': 'Delete',
+        'requires_modal': True,
+        'modal_target': '#deleteModalBdt',
+        'modal_toggle': 'modal',
+    }
+
+    actions_column_verbose_name = ''
+    actions_template_name = 'better_django_tables/partials/actions_column.html'
+
+    def __new__(cls, *args, **kwargs):
+        if not getattr(cls, 'has_actions_column', True):
+            return super().__new__(cls)
+
+        if 'actions' not in cls.base_columns:
+            cls.base_columns['actions'] = tables.TemplateColumn(
+                template_name=cls.actions_template_name,
+                orderable=False,
+                verbose_name=cls.actions_column_verbose_name,
+                empty_values=(),
+                attrs={'td': {'class': 'text-center actions-column'}},
+            )
+        return super().__new__(cls)
+
+    def __init__(self, *args, has_actions_column=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if has_actions_column is not None:
+            self.has_actions_column = has_actions_column
+
+        if not getattr(self, 'has_actions_column', True):
+            return
+
+        # Build the list of enabled actions
+        self.enabled_actions = self._get_enabled_actions()
+
+    def _get_enabled_actions(self):
+        """Return a list of enabled actions with their configuration."""
+        actions = []
+
+        # Standard Actions Configuration
+        actions = self._add_standard_actions(actions)
+
+
+        if hasattr(self, 'actions') and self.actions:
+            # Use the structured actions list
+            for action_config in self.actions:
+                action = self._normalize_action_config(action_config)
+                if action:
+                    actions.append(action)
+
+        return actions
+
+    def _add_standard_actions(self, actions: list[dict]) -> list[dict]:
+        """Add standard actions to the actions list."""
+        if self.enable_view_action:
+            if self.view_action['url_name'] is None:
+                try:
+                    self.view_action['url_name'] = self.actions_url_names['view']
+                except KeyError as exc:
+                    raise ImproperlyConfigured(
+                        f"{self.__class__.__name__} requires 'view_action' to have a 'url_name' or 'actions_url_names' to be defined."
+                    ) from exc
+            actions.append(self._normalize_action_config(self.view_action))
+        if self.enable_edit_action:
+            if self.edit_action['url_name'] is None:
+                try:
+                    self.edit_action['url_name'] = self.actions_url_names['edit']
+                except KeyError as exc:
+                    raise ImproperlyConfigured(
+                        f"{self.__class__.__name__} requires 'edit_action' to have a 'url_name' or 'actions_url_names' to be defined."
+                    ) from exc
+            actions.append(self._normalize_action_config(self.edit_action))
+        if self.enable_delete_action:
+            if self.delete_action['url_name'] is None:
+                try:
+                    self.delete_action['url_name'] = self.actions_url_names['delete']
+                except KeyError as exc:
+                    raise ImproperlyConfigured(
+                        f"{self.__class__.__name__} requires 'delete_action' to have a 'url_name' or 'actions_url_names' to be defined."
+                    ) from exc
+            actions.append(self._normalize_action_config(self.delete_action))
+        return actions
+
+    def _normalize_action_config(self, config):
+        """Normalize an action configuration dictionary."""
+        try:
+            # Build normalized action config
+            action = {
+                'name': config['name'],
+                'url_name': config.get('url_name'),
+                'url_kwargs': config.get('url_kwargs'),
+                'icon': config['icon'],
+                'class': config['class'],
+                'title': config['title'],
+                'requires_modal': config.get('requires_modal', False),
+            }
+
+            # Handle modal configuration
+            if action['requires_modal']:
+                action['modal_target'] = config['modal_target']
+                action['modal_toggle'] = config['modal_toggle']
+        except Exception as exc:
+            raise ImproperlyConfigured(f'{self.__class__.__name__} is improperly configured') from exc
+        return action
+
+    # def _get_legacy_actions(self):
+    #     """Get actions using the legacy approach for backward compatibility."""
+    #     actions = []
+
+    #     if getattr(self, 'enable_view_action', True) and 'view' in self.actions_url_names:
+    #         actions.append({
+    #             'name': 'view',
+    #             'url_name': self.actions_url_names['view'],
+    #             'url_kwargs': None,
+    #             'icon': self.action_icons.get('view', 'bi bi-eye'),
+    #             'class': self.action_classes.get('view', 'text-info'),
+    #             'title': self.action_titles.get('view', 'View'),
+    #             'requires_modal': False,
+    #         })
+
+    #     if getattr(self, 'enable_edit_action', True) and 'edit' in self.actions_url_names:
+    #         actions.append({
+    #             'name': 'edit',
+    #             'url_name': self.actions_url_names['edit'],
+    #             'url_kwargs': None,
+    #             'icon': self.action_icons.get('edit', 'bi bi-pencil-square'),
+    #             'class': self.action_classes.get('edit', 'text-primary'),
+    #             'title': self.action_titles.get('edit', 'Edit'),
+    #             'requires_modal': False,
+    #         })
+
+    #     if getattr(self, 'enable_delete_action', True) and 'delete' in self.actions_url_names:
+    #         actions.append({
+    #             'name': 'delete',
+    #             'url_name': self.actions_url_names['delete'],
+    #             'url_kwargs': None,
+    #             'icon': self.action_icons.get('delete', 'bi bi-trash'),
+    #             'class': self.action_classes.get('delete', 'text-danger'),
+    #             'title': self.action_titles.get('delete', 'Delete'),
+    #             'requires_modal': True,
+    #             'modal_target': '#deleteModalBdt',
+    #             'modal_toggle': 'modal',
+    #         })
+
+    #     return actions
+
+    # def add_custom_action(self, name, url_name, icon='bi bi-gear', css_class='text-secondary',
+    #                      title=None, requires_modal=False, modal_target=None, modal_toggle=None):
+    #     """
+    #     Add a custom action to the actions column.
+
+    #     Args:
+    #         name: Unique name for the action
+    #         url_name: Django URL name for the action
+    #         icon: CSS class for the icon (default: 'bi bi-gear')
+    #         css_class: CSS class for styling (default: 'text-secondary')
+    #         title: Tooltip text (default: capitalized name)
+    #         requires_modal: Whether this action requires a modal (default: False)
+    #         modal_target: Modal target selector (e.g., '#myModal')
+    #         modal_toggle: Modal toggle type (e.g., 'modal')
+    #     """
+    #     if not hasattr(self, 'enabled_actions'):
+    #         self.enabled_actions = []
+
+    #     action = {
+    #         'name': name,
+    #         'url_name': url_name,
+    #         'icon': icon,
+    #         'class': css_class,
+    #         'title': title or name.replace('_', ' ').title(),
+    #         'requires_modal': requires_modal,
+    #     }
+
+    #     if requires_modal:
+    #         action['modal_target'] = modal_target
+    #         action['modal_toggle'] = modal_toggle
+
+    #     self.enabled_actions.append(action)
+
+
 class BootstrapTableMixin:
     """
     Mixin for django-tables2 Table classes to add Bootstrap 5 classes to the table.

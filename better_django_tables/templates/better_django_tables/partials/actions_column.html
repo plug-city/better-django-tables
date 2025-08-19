@@ -1,0 +1,20 @@
+{% load django_tables2 action_tags %}
+<div class="action-buttons d-flex gap-2 justify-content-center">
+    {% for action in table.enabled_actions %}
+        {% if action.requires_modal %}
+            <i class="{{ action.icon }} {{ action.class }}"
+               style="cursor: pointer;"
+               data-bs-toggle="{{ action.modal_toggle }}"
+               data-bs-target="{{ action.modal_target }}"
+               data-delete-url="{% action_url action record %}"
+               data-item-name="{{ record }}"
+               title="{{ action.title }}"></i>
+        {% else %}
+            <a href="{% action_url action record %}"
+               class="{{ action.class }}"
+               title="{{ action.title }}">
+                <i class="{{ action.icon }}"></i>
+            </a>
+        {% endif %}
+    {% endfor %}
+</div>

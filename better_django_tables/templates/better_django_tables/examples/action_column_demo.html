@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load django_tables2 %}
+
+{% block title %}Action Column Demo{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>ActionColumnMixin Demo</h2>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Example Table with Action Column</h5>
+                </div>
+                <div class="card-body">
+                    {% render_table table %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action buttons will use these modals -->
+
+    <!-- Delete Modal (from DeletableTableMixin) -->
+    {% include 'better_django_tables/partials/delete_modal.html' %}
+
+    <!-- Custom Approve Modal (example for custom actions) -->
+    <div class="modal fade" id="approveModal" tabindex="-1" aria-labelledby="approveModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="approveModalLabel">Confirm Approval</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to approve <strong id="approve-item-name"></strong>?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <a href="#" id="approve-confirm-btn" class="btn btn-success">Approve</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.action-buttons i {
+    font-size: 1.1em;
+    transition: all 0.2s ease;
+}
+
+.action-buttons i:hover {
+    transform: scale(1.2);
+}
+
+.actions-column {
+    width: 120px;
+    white-space: nowrap;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle approve modal
+    const approveModal = document.getElementById('approveModal');
+    if (approveModal) {
+        approveModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const itemName = button.getAttribute('data-item-name');
+            const approveUrl = button.getAttribute('data-approve-url');
+
+            const modalItemName = approveModal.querySelector('#approve-item-name');
+            const confirmBtn = approveModal.querySelector('#approve-confirm-btn');
+
+            modalItemName.textContent = itemName;
+            confirmBtn.href = approveUrl;
+        });
+    }
+});
+</script>
+{% endblock %}
