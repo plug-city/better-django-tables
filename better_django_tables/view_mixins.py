@@ -1,4 +1,6 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring,too-few-public-methods
+import logging
+
 from itertools import count
 
 from django.contrib import messages
@@ -11,6 +13,8 @@ from django_tables2 import RequestConfig
 
 from better_django_tables import models, forms
 
+
+logger = logging.getLogger(__name__)
 
 class NextViewMixin:
     """
@@ -205,6 +209,7 @@ class BulkActionViewMixin:
             else:
                 messages.warning(request, "No items were deleted.")
         except Exception as e:
+            logger.exception("Error during bulk delete: %s", e)
             messages.error(request, f"Error deleting items: {str(e)}")
             print(f"{e}")
         # Redirect to the same page to prevent re-submission
