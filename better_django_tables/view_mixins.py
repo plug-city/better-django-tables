@@ -131,10 +131,12 @@ class BulkActionViewMixin:
     Usage:
         class MyListView(BulkActionViewMixin, ListView):
             model = MyModel
+            self.delete_method = services.object_delete
 
             def post(self, request, *args, **kwargs):
                 return self.handle_bulk_action(request)
     """
+    delete_method = None  # Set this to the method that handles deletion
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -158,7 +160,8 @@ class BulkActionViewMixin:
 
     def handle_bulk_delete(self, request, selected_items):
         """Handle bulk delete action."""
-
+        if self.delete_method:
+            return self._delete_with_custom_method(request, selected_items)
         try:
             # Get the model from the view
             model = getattr(self, 'model', None)
@@ -166,6 +169,34 @@ class BulkActionViewMixin:
                 raise ValueError("Model not specified")
             # Delete selected items
             deleted_count, _ = model.objects.filter(pk__in=selected_items).delete()
+            if deleted_count > 0:
+                messages.warning(
+                    request,
+                    f"Successfully deleted {deleted_count} {model._meta.verbose_name}(s)."
+                )
+            else:
+                messages.warning(request, "No items were deleted.")
+        except Exception as e:
+            messages.error(request, f"Error deleting items: {str(e)}")
+            print(f"{e}")
+        # Redirect to the same page to prevent re-submission
+        return redirect(self.get_success_url())
+
+
+    def _delete_with_custom_method(self, request, selected_items):
+        """Handle bulk delete action."""
+
+        try:
+            # Get the model from the view
+            model = getattr(self, 'model', None)
+            if not model:
+                raise ValueError("Model not specified")
+            # Delete selected items
+            deleted_count = 0
+            for object in model.objects.filter(pk__in=selected_items):
+                self.delete_method(object)
+                deleted_count += 1
+            # deleted_count, _ = model.objects.filter(pk__in=selected_items).delete()
             if deleted_count > 0:
                 messages.warning(
                     request,
