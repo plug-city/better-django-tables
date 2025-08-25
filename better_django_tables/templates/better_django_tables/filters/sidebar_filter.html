@@ -36,8 +36,10 @@
             </div>
           {% else %}
             <!-- Handle all other field types -->
-            {{ field.label_tag }}
-            {{ field }}
+            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+            <div class="w-100">
+              {{ field }}
+            </div>
           {% endif %}
         </div>
         {% endif %}
