@@ -12,8 +12,33 @@
       <h5>Filters</h5>
       {% for field in filter.form.visible_fields %}
         {% if field.name != 'search' %}
-        <div class="mb-2">
-          {{ field.label_tag }}{{ field }}
+        <div class="mb-3">
+          {% if field.field.widget.input_type == 'checkbox' and field|length > 1 %}
+            <!-- Handle CheckboxSelectMultiple widgets -->
+            <label class="form-label">{{ field.label }}</label>
+            <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+              {% for choice in field %}
+                <div class="form-check">
+                  {{ choice.tag }}
+                  <label class="form-check-label" for="{{ choice.id_for_label }}">
+                    {{ choice.choice_label }}
+                  </label>
+                </div>
+              {% endfor %}
+            </div>
+          {% elif field.field.widget.input_type == 'checkbox' %}
+            <!-- Handle single checkbox (BooleanField) -->
+            <div class="form-check">
+              {{ field }}
+              <label class="form-check-label" for="{{ field.id_for_label }}">
+                {{ field.label }}
+              </label>
+            </div>
+          {% else %}
+            <!-- Handle all other field types -->
+            {{ field.label_tag }}
+            {{ field }}
+          {% endif %}
         </div>
         {% endif %}
       {% endfor %}
