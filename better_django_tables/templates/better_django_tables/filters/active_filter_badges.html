@@ -1,6 +1,6 @@
 {% load querystring from django_tables2 %}
 <!-- Active Filters Display -->
-{% if active_filters %}
+{% if active_filters and show_filter_badges %}
   <div class="mb-3">
     {% for active_filter in active_filters %}
       <span class="badge bg-light text-dark me-1 mb-1">

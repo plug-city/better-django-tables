@@ -1,13 +1,10 @@
 {% load static %}
-
-
-
 {% load render_table from django_tables2 %}
 {% load querystring from django_tables2 %}
 {% load delete_modal %}
 
 
-<div class="container-fluid">
+<div class="container-fluid inline-table">
   <div class="row">
     <div class="table-responsive">
 
@@ -36,13 +33,13 @@
         <!-- Controls -->
         <div class="d-flex gap-2">
           <!-- Active Filters Badges -->
-          {% include "better_django_tables/filters/active_filter_badges.html" %}
+          {% include "better_django_tables/filters/active_filter_badges.html" with show_filter_badges=htmx_show_filter_badges%}
 
           <!-- Search Bar -->
           {% include "better_django_tables/filters/searchbar_filter.html" %}
 
           <!-- Reports Section -->
-          {% if available_reports is not None %}
+          {% if available_reports is not None and htmx_show_reports %}
             {% include "better_django_tables/reports/reports.html" %}
           {% endif %}
 
@@ -58,9 +55,11 @@
           {% endif %}
 
           <!-- Per Page Selector -->
-          <div class="col-auto">
-            {% include "better_django_tables/partials/per_page_selector.html" %}
-          </div>
+          {% if htmx_show_per_page %}
+            <div class="col-auto">
+              {% include "better_django_tables/partials/per_page_selector.html" %}
+            </div>
+          {% endif %}
 
           <!-- Export Buttons -->
           {% if exportable %}
@@ -77,7 +76,9 @@
       {% endif %}
 
       {% include "better_django_tables/partials/bulk_actions.html" %}
-      {% render_table table %}
+
+      {% render_table table table.htmx_template_name%}
+
     </div>
   </div>
 </div>

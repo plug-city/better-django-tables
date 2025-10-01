@@ -571,3 +571,18 @@ class BootstrapTableMixin:
         if not hasattr(self, 'attrs'):
             self.attrs = {}
         self.attrs.setdefault("class", self.bootstrap_table_class)
+
+
+class HtmxTableMixin:
+    """
+    Mixin to add HTMX support to tables.
+    Provides methods to handle HTMX requests and render HTMX-specific templates.
+
+    Methods to override in subclasses:
+        get_htmx_template_name(self): Return the HTMX template name to use.
+    """
+
+    htmx_template_name = "better_django_tables/tables/bootstrap5-htmx-table.html"
+
+    def get_htmx_template_name(self):
+        return self.htmx_template_name

@@ -12,13 +12,14 @@ from better_django_tables.view_mixins import (
     ActiveFilterMixin,
     BulkActionViewMixin,
     ReportableViewMixin,
-    BetterMultiTableMixin
+    BetterMultiTableMixin,
+    HtmxTableViewMixin
 )
 from better_django_tables import models, filters, tables
 
 
 class TableView(NextViewMixin, ActiveFilterMixin, BulkActionViewMixin,
-                ReportableViewMixin, SingleTableMixin, FilterView):
+                ReportableViewMixin, HtmxTableViewMixin, SingleTableMixin, FilterView):
     """
     TableView is a reusable base class for Django views that display tabular data using django-tables2 and django-filter.
 
@@ -49,7 +50,6 @@ class TableView(NextViewMixin, ActiveFilterMixin, BulkActionViewMixin,
             return super().post(request, *args, **kwargs)  # ReportableMixin handles this
         # Then handle bulk actions
         return self.handle_bulk_action(request)
-
 
 
 class ReportListView(LoginRequiredMixin, SingleTableMixin, FilterView):

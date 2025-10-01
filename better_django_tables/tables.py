@@ -11,12 +11,13 @@ from better_django_tables.table_mixins import (
     CreateTableMixin,
     TableNameMixin,
     BootstrapTableMixin,
-    ActionsColumnMixin
+    ActionsColumnMixin,
+    HtmxTableMixin,
 )
 
 
 class TableMixin(DeletableTableMixin, BulkActionTableMixin, EditableTableMixin, CreateTableMixin,
-            TableNameMixin, BootstrapTableMixin, ActionsColumnMixin):
+            TableNameMixin, BootstrapTableMixin, ActionsColumnMixin, HtmxTableMixin):
     """
     Base table class with common
     functionality for deletion, bulk actions, and editing.
@@ -172,5 +173,6 @@ class ReportTable(DeletableTableMixin, BulkActionTableMixin, EditableTableMixin,
             return format_html('<div class="btn-group btn-group-sm">{}</div>', ''.join(actions))
         else:
             return format_html('<span class="text-muted small">No actions</span>')
+
 
 

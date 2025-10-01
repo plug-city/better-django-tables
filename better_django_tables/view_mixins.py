@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.shortcuts import redirect
 from django.db.models import Q
 from django.core.exceptions import ImproperlyConfigured
+from django.views.generic.base import TemplateResponseMixin
 
 from django_tables2.views import TableMixinBase
 from django_tables2 import RequestConfig
@@ -30,6 +31,7 @@ class NextViewMixin:
 
 class ActiveFilterMixin:
     """Mixin to add active filter context to views using django-filter"""
+    show_filter_badges = True
 
     def get_active_filters(self, filter_instance):
         """Extract active filters from a django-filter instance, including date ranges"""
@@ -120,7 +122,7 @@ class ActiveFilterMixin:
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
+        context['show_filter_badges'] = self.show_filter_badges
         # Look for filter in context
         filter_instance = context.get('filter')
         if filter_instance:
@@ -420,6 +422,38 @@ class BetterMultiTableMixin(TableMixinBase):
         context['include_delete_modal'] = self.include_delete_modal
         return context
 
+
+class HtmxTableViewMixin(TemplateResponseMixin):
+    htmx_template_name = 'better_django_tables/tables/better_table_inline.html'
+    htmx_show_reports = False
+    htmx_show_per_page = False
+    htmx_show_filter_badges = False
+
+    def get_template_names(self):
+        """
+        Return a list of template names to be used for the request.
+        Uses htmx_template_name for HTMX requests, otherwise falls back to the default template.
+        """
+        if hasattr(self.request, 'htmx') and self.request.htmx:
+            return [self.htmx_template_name]
+        return super().get_template_names()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['htmx_show_reports'] = self.htmx_show_reports
+        context['htmx_show_per_page'] = self.htmx_show_per_page
+        context['htmx_show_filter_badges'] = self.htmx_show_filter_badges
+        return context
+
+    def get_table_kwargs(self):
+        kwargs = super().get_table_kwargs()
+        exclude_columns_params = self.request.GET.get('excludeColumns', '').split(',')
+        exclude_columns_params = [param.strip() for param in exclude_columns_params if param]  # Remove empty strings
+        if exclude_columns_params:
+            exclude = kwargs.get('exclude', [])
+            exclude.extend(exclude_columns_params)
+            kwargs['exclude'] = exclude
+        return kwargs
 
 # class CreateViewMixin:
 #     """
