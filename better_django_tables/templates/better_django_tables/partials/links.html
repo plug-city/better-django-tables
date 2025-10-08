@@ -1,3 +1,4 @@
+{% if links %}
 <div class='links'>
     {% for link in links %}
     {% if link.method|default:"GET"|upper == "POST" %}
@@ -27,3 +28,4 @@
     {% endif %}
     {% endfor %}
 </div>
+{% endif %}

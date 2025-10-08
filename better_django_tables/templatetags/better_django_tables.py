@@ -3,7 +3,8 @@ from django_tables2.rows import BoundRow
 
 register = template.Library()
 
-@register.inclusion_tag('better_django_tables/tables/better_table.html', takes_context=True)
+# @register.inclusion_tag('better_django_tables/tables/better_table.html', takes_context=True)
+@register.inclusion_tag('better_django_tables/table.html', takes_context=True)
 def render_better_table(context, table):
     ctx = context.flatten() if hasattr(context, 'flatten') else dict(context)
     ctx['table'] = table

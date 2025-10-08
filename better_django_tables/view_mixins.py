@@ -1,5 +1,6 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring,too-few-public-methods
 import logging
+import csv
 
 from itertools import count
 
@@ -8,6 +9,7 @@ from django.shortcuts import redirect
 from django.db.models import Q
 from django.core.exceptions import ImproperlyConfigured
 from django.views.generic.base import TemplateResponseMixin
+from django.http import StreamingHttpResponse
 
 from django_tables2.views import TableMixinBase
 from django_tables2 import RequestConfig
@@ -31,7 +33,8 @@ class NextViewMixin:
 
 class ActiveFilterMixin:
     """Mixin to add active filter context to views using django-filter"""
-    show_filter_badges = True
+    show_filter_badges: bool|None = None
+    default_show_filter_badges = True
 
     def get_active_filters(self, filter_instance):
         """Extract active filters from a django-filter instance, including date ranges"""
@@ -122,13 +125,36 @@ class ActiveFilterMixin:
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['show_filter_badges'] = self.show_filter_badges
+        context['show_filter_badges'] = self.get_show_filter_badges()
         # Look for filter in context
         filter_instance = context.get('filter')
         if filter_instance:
             context['active_filters'] = self.get_active_filters(filter_instance)
-
         return context
+
+    def get_show_filter_badges(self, value: bool|None=None) -> bool:
+        """
+        Determines if the filter badges should be shown.
+
+        Priority order:
+        1. 'show_filter_badges' query parameter (e.g., ?show_filter_badges=true)
+        2. value method argument if provided
+        2. View's show_filter_badges attribute
+        3. default_show_filter_badges attribute
+
+        Returns: bool: True if the links should be shown, False otherwise.
+        """
+        show_param = self.request.GET.get('show_filter_badges')
+        if show_param is not None:
+            return show_param.lower() in ['1', 'true', 'yes']
+
+        if value is not None:
+            return value
+
+        if self.show_filter_badges is not None:
+            return self.show_filter_badges
+
+        return self.default_show_filter_badges
 
 
 class BulkActionViewMixin:
@@ -222,6 +248,9 @@ class ReportableViewMixin:
     """
     Mixin to add report saving/loading functionality to FilterViews
     """
+    show_reports: bool|None = None
+    default_show_reports: bool = True
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['available_reports'] = self.get_available_reports()
@@ -232,6 +261,7 @@ class ReportableViewMixin:
                 'filter_params': self.get_current_filter_params()
             }
         )
+        context['show_reports'] = self.get_show_reports()
         return context
 
     def get_available_reports(self):
@@ -341,6 +371,31 @@ class ReportableViewMixin:
         return redirect(request.path)
 
 
+    def get_show_reports(self, value: bool|None=None) -> bool:
+        """
+        Determines if the reports section should be shown.
+
+        Priority order:
+        1. 'show_reports' query parameter (e.g., ?show_reports=true)
+        2. value method argument if provided
+        2. View's show_reports attribute if it exists
+        3. Default to True
+
+        Returns: bool: True if the reports section should be shown, False otherwise.
+        """
+        show_param = self.request.GET.get('show_reports')
+        if show_param is not None:
+            return show_param.lower() in ['1', 'true', 'yes']
+
+        if value is not None:
+            return value
+
+        if hasattr(self, 'show_reports') and self.show_reports is not None:
+            return self.show_reports
+
+        return self.default_show_reports
+
+
 class BetterMultiTableMixin(TableMixinBase):
     """
     Mixin for views that need to display multiple tables on the same page.
@@ -423,37 +478,114 @@ class BetterMultiTableMixin(TableMixinBase):
         return context
 
 
-class HtmxTableViewMixin(TemplateResponseMixin):
-    htmx_template_name = 'better_django_tables/tables/better_table_inline.html'
-    htmx_show_reports = False
-    htmx_show_per_page = False
-    htmx_show_filter_badges = False
+# class ExcludeColumnsMixin:
+#     """
+#     Mixin to exclude columns from a table based on 'excludeColumns' query parameter.
+#     Usage:
+#         class MyTableView(ExcludeColumnsMixin, SingleTableMixin, FilterView):
+#             model = MyModel
+#             table_class = MyTable
+#     """
+#     param_key: str = 'excludeColumns'
 
-    def get_template_names(self):
-        """
-        Return a list of template names to be used for the request.
-        Uses htmx_template_name for HTMX requests, otherwise falls back to the default template.
-        """
-        if hasattr(self.request, 'htmx') and self.request.htmx:
-            return [self.htmx_template_name]
-        return super().get_template_names()
+#     def get_table_kwargs(self):
+#         kwargs = super().get_table_kwargs()
+#         exclude_columns_params = self.request.GET.get(self.param_key, '').split(',')
+#         exclude_columns_params = [param.strip() for param in exclude_columns_params if param]  # Remove empty strings
+#         if exclude_columns_params:
+#             exclude = kwargs.get('exclude', [])
+#             exclude.extend(exclude_columns_params)
+#             kwargs['exclude'] = exclude
+#         return kwargs
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['htmx_show_reports'] = self.htmx_show_reports
-        context['htmx_show_per_page'] = self.htmx_show_per_page
-        context['htmx_show_filter_badges'] = self.htmx_show_filter_badges
-        return context
+
+class SelectColumnsViewMixin:
+    """
+    Mixin to select or exclude columns from a table based on 'excludeColumns' or
+    'cols' query parameter.
+
+    The mixin supports two modes:
+    1. Exclude mode (?excludeColumns=col1,col2) - Hide specific columns
+    2. Select mode (?cols=col1,col2) - Show only specific columns
+
+    Usage:
+        class MyTableView(SelectColumnsViewMixin, SingleTableMixin, FilterView):
+            model = MyModel
+            table_class = MyTable
+
+        # URLs:
+        # /my-view/?excludeColumns=id,created_at  -> Hide id and created_at columns
+        # /my-view/?cols=name,status              -> Show only name and status columns
+    """
+    exclude_param_key: str = 'excludeColumns'
+    select_param_key: str = 'cols'
 
     def get_table_kwargs(self):
         kwargs = super().get_table_kwargs()
-        exclude_columns_params = self.request.GET.get('excludeColumns', '').split(',')
-        exclude_columns_params = [param.strip() for param in exclude_columns_params if param]  # Remove empty strings
+        exclude_columns_params = self.get_exclude_columns()
+        select_columns_params = self.get_select_columns()
+
+        # Ensure both parameters aren't used simultaneously
+        if select_columns_params and exclude_columns_params:
+            raise ImproperlyConfigured(
+                f"Cannot use both '{self.exclude_param_key}' and '{self.select_param_key}' "
+                "parameters simultaneously."
+            )
+
+        # Handle exclude mode
         if exclude_columns_params:
             exclude = kwargs.get('exclude', [])
             exclude.extend(exclude_columns_params)
             kwargs['exclude'] = exclude
+
+        # Handle select mode - delegate to separate method
+        elif select_columns_params:
+            exclude_columns = self.create_exclude_columns_from_select()
+            exclude = kwargs.get('exclude', [])
+            exclude.extend(exclude_columns)
+            kwargs['exclude'] = exclude
+
         return kwargs
+
+    def get_exclude_columns(self):
+        """Parse and return list of columns to exclude from query params"""
+        exclude_columns_params = self.request.GET.get(self.exclude_param_key, '').split(',')
+        return [param.strip() for param in exclude_columns_params if param.strip()]
+
+    def get_select_columns(self):
+        """Parse and return list of columns to show from query params"""
+        select_columns_params = self.request.GET.get(self.select_param_key, '').split(',')
+        return [param.strip() for param in select_columns_params if param.strip()]
+
+    def create_exclude_columns_from_select(self):
+        """
+        Create an exclude list based on the select columns parameter.
+
+        This method converts a positive selection (show these columns) into
+        an exclusion list (hide everything except these columns).
+
+        Returns:
+            list: Column names to exclude
+
+        Example:
+            If table has columns: ['id', 'name', 'price', 'stock', 'created_at']
+            And ?cols=name,price is specified
+            Returns: ['id', 'stock', 'created_at']
+        """
+        select_columns_params = self.get_select_columns()
+        if not select_columns_params:
+            return []
+
+        # Get all available columns from the table class
+        table_class = self.get_table_class()
+        all_columns = set(table_class.base_columns.keys())
+        selected_columns = set(select_columns_params)
+
+        # Calculate columns to exclude (everything not selected)
+        exclude_columns = list(all_columns - selected_columns)
+        print(f'Excluding columns: {exclude_columns} based on selection: {select_columns_params}')
+        return exclude_columns
+
 
 # class CreateViewMixin:
 #     """
@@ -493,3 +625,631 @@ class HtmxTableViewMixin(TemplateResponseMixin):
 #         print(f'Updated attributes: {attrs}')  # Debug
 #         kwargs['attrs'] = attrs
 #         return kwargs
+
+
+class PerPageViewMixin:
+    """
+    Mixin to add per-page selection functionality to table views.
+
+    This mixin allows users to select how many records to display per page.
+    The selection is saved in the session and persists across requests.
+    Works with HTMX requests for dynamic updates.
+
+    Attributes:
+        per_page_options (list): List of available per-page options. Default: [10, 25, 50, 100, 500, 1000]
+        default_per_page (int): Default number of records per page if no preference is set. Default: 25
+        per_page_session_key (str): Session key to store the per-page preference. Default: 'table_per_page'
+
+    Usage:
+        class MyTableView(PerPageViewMixin, SingleTableMixin, FilterView):
+            model = MyModel
+            table_class = MyTable
+            per_page_options = [10, 25, 50, 100]
+            default_per_page = 25
+    """
+    per_page_options = [10, 25, 50, 100, 101, 500, 1000]
+    default_per_page = 25
+    per_page_session_key = 'table_per_page'
+    paginate_by: int | None
+    show_per_page_selector: bool | None = None
+    default_show_per_page_selector: bool = True
+
+    def get_paginate_by(self, table_data):
+        """
+        Get the number of items to display per page.
+
+        Priority order:
+        1. 'per_page' query parameter (e.g., ?per_page=50)
+        2. Session-stored preference
+        3. View's paginate_by attribute
+        4. default_per_page attribute
+
+        Also saves the selection to the session for future requests.
+
+        Args:
+            table_data: The queryset or table data (required by django-tables2)
+        """
+        # Check for per_page in query parameters (GET or POST for HTMX)
+        per_page = self.request.GET.get('per_page') or self.request.POST.get('per_page')
+
+        if per_page:
+            try:
+                per_page = int(per_page)
+                # Validate it's in the allowed options
+                if per_page in self.per_page_options:
+                    # Save to session
+                    self.request.session[self.get_per_page_session_key()] = per_page
+                    print(f'set per page in session cookies to: {per_page=} | {self.get_per_page_session_key()=}')
+                    return per_page
+            except (ValueError, TypeError):
+                pass
+
+        # Check session for saved preference
+        session_per_page = self.request.session.get(self.get_per_page_session_key())
+        if session_per_page and session_per_page in self.per_page_options:
+            print(f'retrieved per page from session cookies: {session_per_page=} | {self.get_per_page_session_key()=}')
+            return session_per_page
+
+        # Fall back to view's paginate_by attribute if set
+        if hasattr(self, 'paginate_by') and self.paginate_by:
+            return self.paginate_by
+
+        # Finally, use default_per_page
+        return self.default_per_page
+
+    def get_per_page_session_key(self):
+        return self.per_page_session_key
+
+    def get_show_per_page_selector(self, value: bool|None=None) -> bool:
+        """
+        Determines if the per-page selector should be shown
+
+        Priority order:
+        1. 'show_per_page_selector' query parameter (e.g., ?show_per_page_selector=true)
+        2. value method argument if provided
+        3. View's show_per_page_selector attribute
+        4. default_show_per_page_selector attribute
+
+        Returns: bool: True if the selector should be shown, False otherwise.
+        """
+        show_param = self.request.GET.get('show_per_page_selector')
+        if show_param is not None:
+            return show_param.lower() in ['1', 'true', 'yes']
+
+        if value is not None:
+            return value
+
+        if self.show_per_page_selector is not None:
+            return self.show_per_page_selector
+
+        return self.default_show_per_page_selector
+
+
+    def get_context_data(self, **kwargs):
+        """Add per_page options to context for template use."""
+        context = super().get_context_data(**kwargs)
+        context['per_page_options'] = self.per_page_options
+        context['current_per_page'] = self.get_paginate_by(self.get_queryset())
+        context['show_per_page_selector'] = self.get_show_per_page_selector()
+        return context
+
+
+class ShowFilterMixin:
+    """
+    Mixin to control the display of the filter sidebar in table views.
+
+    Attributes:
+        show_filter (bool): Whether to show the filter sidebar. Default: True
+
+    Usage:
+        class MyTableView(ShowFilterMixin, SingleTableMixin, FilterView):
+            model = MyModel
+            table_class = MyTable
+            show_filter = True  # or False to hide
+    """
+    show_filter: bool = True
+
+    def get_show_filter(self, value: bool|None=None) -> bool:
+        """
+        Determines if the filter sidebar should be shown.
+
+        Priority order:
+        1. 'show_filter' query parameter (e.g., ?show_filter=true)
+        2. method argument 'value' if provided
+        3. View's show_filter attribute
+
+        Returns: bool: True if the filter should be shown, False otherwise.
+        """
+        show_param = self.request.GET.get('show_filter')
+        if show_param is not None:
+            return show_param.lower() in ['1', 'true', 'yes']
+        if value is not None:
+            return value
+        return self.show_filter
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['show_filter'] = self.get_show_filter()
+        return context
+
+
+class LinksMixin:
+    """
+    Mixin to add navigation links to the context of table views.
+
+    Attributes:
+        links (list): List of navigation links to display. Each link is a dict with 'url' and 'label'.
+                      Default: None (no links)
+
+    Usage:
+        class MyTableView(LinksMixin, SingleTableMixin, FilterView):
+            model = MyModel
+            table_class = MyTable
+            links = [
+                {'url': '/some/url/', 'label': 'Some Link'},
+                {'url': '/another/url/', 'label': 'Another Link'},
+            ]
+    """
+    links: list[dict] | None = None
+    show_links: bool | None = None
+    default_show_links: bool = True
+
+    def get_links(self):
+        """Return the list of navigation links."""
+        return self.links or []
+
+    def get_show_links(self, value: bool|None=None) -> bool:
+        """
+        Determines if the navigation links should be shown.
+
+        Priority order:
+        1. 'show_links' query parameter (e.g., ?show_links=true)
+        2. value method argument if provided
+        2. View's show_links attribute
+        3. default_show_links attribute
+
+        Returns: bool: True if the links should be shown, False otherwise.
+        """
+        show_param = self.request.GET.get('show_links')
+        if show_param is not None:
+            return show_param.lower() in ['1', 'true', 'yes']
+
+        if value is not None:
+            return value
+
+        if self.show_links is not None:
+            return self.show_links
+
+        return self.default_show_links
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['links'] = self.get_links()
+        context['show_links'] = self.get_show_links()
+        return context
+
+
+class SearchbarMixin:
+    """
+    Mixin to add a search bar to the context of table views.
+
+    Attributes:
+        show_search_bar (bool): Whether to show the search bar. Default: True
+
+    Usage:
+        class MyTableView(SearchbarMixin, SingleTableMixin, FilterView):
+            model = MyModel
+            table_class = MyTable
+            show_search_bar = True  # or False to hide
+    """
+    show_search_bar: bool = True
+
+    def get_show_search_bar(self, value: bool|None=None) -> bool:
+        """
+        Determines if the search bar should be shown.
+
+        Priority order:
+        1. 'show_search_bar' query parameter (e.g., ?show_search_bar=true)
+        2. method argument 'value' if provided
+        3. View's show_search_bar attribute
+
+        Returns: bool: True if the search bar should be shown, False otherwise.
+        """
+        show_param = self.request.GET.get('show_search_bar')
+        if show_param is not None:
+            return show_param.lower() in ['1', 'true', 'yes']
+        if value is not None:
+            return value
+        return self.show_search_bar
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['show_search_bar'] = self.get_show_search_bar()
+        return context
+
+
+class ShowCreateButtonMixin:
+    """
+    Mixin to add a create button to the context of table views.
+
+    Attributes:
+        show_create_button (bool): Whether to show the create button. Default: True
+
+    Usage:
+        class MyTableView(ShowCreateButtonMixin, SingleTableMixin, FilterView):
+            model = MyModel
+            table_class = MyTable
+            create_url = '/path/to/create/'
+            create_url_label = 'Add New'
+            show_create_button = True  # or False to hide
+    """
+    show_create_button: bool|None = None
+    default_show_create_button: bool = True
+
+    def get_show_create_button(self, value: bool|None=None) -> bool:
+        """
+        Determines if the create button should be shown.
+
+        Priority order:
+        1. 'show_create_button' query parameter (e.g., ?show_create_button=true)
+        2. method argument 'value' if provided
+        3. View's show_create_button attribute
+        4. default_show_create_button attribute
+
+        Returns: bool: True if the create button should be shown, False otherwise.
+        """
+        show_param = self.request.GET.get('show_create_button')
+        if show_param is not None:
+            return show_param.lower() in ['1', 'true', 'yes']
+        if value is not None:
+            return value
+        if self.show_create_button is None:
+            return self.show_create_button
+        return self.default_show_create_button
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['show_create_button'] = self.get_show_create_button()
+        return context
+
+
+class ShowTableNameViewMixin:
+    """
+    Mixin to add the table name to the context of table views.
+
+    Attributes:
+        show_table_name (bool): Whether to show the table name. Default: True
+
+    Usage:
+        class MyTableView(ShowTableNameViewMixin, SingleTableMixin, FilterView):
+            model = MyModel
+            table_class = MyTable
+            show_table_name = True  # or False to hide
+    """
+    show_table_name: bool|None = None
+    default_show_table_name: bool = True
+
+    def get_show_table_name(self, value: bool|None=None) -> bool:
+        """
+        Determines if the table name should be shown.
+
+        Priority order:
+        1. 'show_table_name' query parameter (e.g., ?show_table_name=true)
+        2. method argument 'value' if provided
+        3. View's show_table_name attribute
+
+        Returns: bool: True if the table name should be shown, False otherwise.
+        """
+        show_param = self.request.GET.get('show_table_name')
+        if show_param is not None:
+            return show_param.lower() in ['1', 'true', 'yes']
+        if value is not None:
+            return value
+        if self.show_table_name is not None:
+            return self.show_table_name
+        return self.default_show_table_name
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['show_table_name'] = self.get_show_table_name()
+        return context
+
+
+class Echo:
+    """
+    A minimal file-like object that implements only the write method.
+    
+    Used for streaming CSV exports without buffering the entire file in memory.
+    Instead of storing data in a buffer, it immediately returns the value written.
+    """
+
+    def write(self, value):
+        """Write the value by returning it, instead of storing in a buffer."""
+        return value
+
+
+class StreamExportMixin:
+    """
+    Mixin to add CSV export functionality to table views with streaming support.
+
+    This mixin allows exporting table data as CSV files using Django's StreamingHttpResponse,
+    which is memory-efficient for large datasets. The export is triggered via a query parameter
+    and uses the table's as_values() method to generate rows.
+
+    Attributes:
+        export_name (str): Base name for the exported file. Default: "table"
+        export_trigger_param (str): Query parameter name to trigger export. Default: "_export"
+        exclude_columns (tuple): Columns to exclude from export. Default: ()
+        dataset_kwargs (dict|None): Additional kwargs for dataset creation. Default: None
+        show_export_button (bool|None): Whether to show the export button. Default: None
+        default_show_export_button (bool): Default value for showing export button. Default: True
+
+    Usage:
+        class MyTableView(StreamExportMixin, SingleTableMixin, FilterView):
+            model = MyModel
+            table_class = MyTable
+            export_name = "my_data"
+            exclude_columns = ('actions', 'checkbox')
+            show_export_button = True  # or False to hide
+
+        # Access: /my-view/?_export=csv
+    """
+    export_name = "table"
+    export_trigger_param = "_export"
+    exclude_columns = ()
+    dataset_kwargs = None
+    show_export_button: bool | None = None
+    default_show_export_button: bool = True
+
+    def get_export_filename(self, export_format):
+        """
+        Generate the filename for the exported file.
+
+        Args:
+            export_format (str): The export format (e.g., 'csv')
+
+        Returns:
+            str: Filename in format "{export_name}.{export_format}"
+        """
+        return f"{self.export_name}.{export_format}"
+
+    def get_dataset_kwargs(self):
+        """
+        Get additional keyword arguments for dataset creation.
+
+        Returns:
+            dict|None: Additional kwargs or None
+        """
+        return self.dataset_kwargs
+
+    def get_show_export_button(self, value: bool | None = None) -> bool:
+        """
+        Determines if the export button should be shown.
+
+        Priority order:
+        1. 'show_export_button' query parameter (e.g., ?show_export_button=true)
+        2. value method argument if provided
+        3. View's show_export_button attribute
+        4. default_show_export_button attribute
+
+        Returns:
+            bool: True if the export button should be shown, False otherwise.
+        """
+        show_param = self.request.GET.get('show_export_button')
+        if show_param is not None:
+            return show_param.lower() in ['1', 'true', 'yes']
+
+        if value is not None:
+            return value
+
+        if self.show_export_button is not None:
+            return self.show_export_button
+
+        return self.default_show_export_button
+
+    def create_export(self, export_format):
+        """
+        Create a streaming CSV export response.
+
+        Args:
+            export_format (str): The export format (currently only 'csv' supported)
+
+        Returns:
+            StreamingHttpResponse: A streaming response with CSV data
+        """
+        # Get the table with all current filters/config applied
+        table = self.get_table(**self.get_table_kwargs())
+        
+        # Get table data as rows (list of lists)
+        rows = table.as_values(exclude_columns=self.exclude_columns)
+        
+        # Create CSV writer with streaming buffer
+        pseudo_buffer = Echo()
+        writer = csv.writer(pseudo_buffer)
+        
+        # Create streaming response
+        return StreamingHttpResponse(
+            (writer.writerow(row) for row in rows),
+            content_type="text/csv",
+            headers={
+                "Content-Disposition": f'attachment; filename="{self.get_export_filename(export_format)}"'
+            },
+        )
+
+    def render_to_response(self, context, **kwargs):
+        """
+        Override render_to_response to handle export requests.
+
+        If the export trigger parameter is present in the request,
+        returns a CSV export instead of the normal HTML response.
+
+        Args:
+            context (dict): Template context
+            **kwargs: Additional keyword arguments
+
+        Returns:
+            HttpResponse: Either a CSV export or normal template response
+        """
+        export_format = self.request.GET.get(self.export_trigger_param, None)
+        
+        if export_format:
+            return self.create_export(export_format)
+
+        return super().render_to_response(context, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        """
+        Add export-related context variables for template use.
+
+        Adds:
+            exportable (bool): Always True, indicates export functionality is available
+            show_export_button (bool): Whether to show the export button in the UI
+        """
+        context = super().get_context_data(**kwargs)
+        context['exportable'] = True
+        context['show_export_button'] = self.get_show_export_button()
+        return context
+
+
+class HtmxTableViewMixin(ActiveFilterMixin, ShowFilterMixin, LinksMixin, SearchbarMixin,
+                         ShowCreateButtonMixin, PerPageViewMixin, ShowTableNameViewMixin,
+                         ReportableViewMixin, StreamExportMixin, TemplateResponseMixin):
+    """
+    Comprehensive mixin for table views with HTMX support.
+
+    This mixin combines multiple functionality mixins and provides HTMX-aware
+    rendering with different settings for full-page vs partial table updates.
+
+    Includes support for:
+    - Active filter badges
+    - Filter sidebar
+    - Navigation links
+    - Search bar
+    - Create button
+    - Per-page selector
+    - Table name display
+    - Report saving/loading
+    - CSV export
+    - HTMX partial rendering
+
+    HTMX Behavior:
+        When a request comes via HTMX (request.htmx is True), the view uses
+        htmx_template_name and applies htmx-specific display settings
+        (typically hiding navigation elements for cleaner partial updates).
+
+    Attributes:
+        htmx_template_name (str): Template for HTMX requests. Default: 'better_django_tables/table.html'
+        htmx_show_reports (bool): Show reports in HTMX mode. Default: False
+        htmx_show_per_page (bool): Show per-page selector in HTMX mode. Default: False
+        htmx_show_filter_badges (bool): Show filter badges in HTMX mode. Default: False
+        htmx_show_filter (bool): Show filter sidebar in HTMX mode. Default: False
+        htmx_show_links (bool): Show navigation links in HTMX mode. Default: False
+        htmx_show_search_bar (bool): Show search bar in HTMX mode. Default: False
+        htmx_show_create_button (bool): Show create button in HTMX mode. Default: False
+        htmx_show_per_page_selector (bool): Show per-page selector in HTMX mode. Default: True
+        htmx_show_table_name (bool): Show table name in HTMX mode. Default: False
+        htmx_show_export_button (bool): Show export button in HTMX mode. Default: False
+
+    Usage:
+        class MyTableView(HtmxTableViewMixin, SingleTableMixin, FilterView):
+            model = MyModel
+            table_class = MyTable
+            filterset_class = MyFilter
+
+            # Override HTMX settings if needed
+            htmx_show_filter = True
+            htmx_show_search_bar = True
+    """
+    # htmx_template_name = 'better_django_tables/tables/better_table_inline.html'
+    htmx_template_name = 'better_django_tables/table.html'
+    htmx_show_reports = False
+    htmx_show_per_page = False
+    htmx_show_filter_badges = False
+    htmx_show_filter = False
+    htmx_show_links = False
+    htmx_show_search_bar = False
+    htmx_show_create_button = False
+    htmx_show_per_page_selector = True
+    htmx_show_table_name = False
+    htmx_show_export_button = False
+
+    def get_template_names(self):
+        """
+        Return a list of template names to be used for the request.
+        
+        Uses htmx_template_name for HTMX requests (partial updates),
+        otherwise falls back to the default template (full page render).
+        
+        Returns:
+            list: List of template name strings
+        """
+        if hasattr(self.request, 'htmx') and self.request.htmx:
+            return [self.htmx_template_name]
+        return super().get_template_names()
+
+    def get_context_data(self, **kwargs):
+        """
+        Add HTMX-specific context variables.
+        
+        These are used by templates to conditionally show/hide elements
+        based on whether the request is an HTMX partial update.
+        """
+        context = super().get_context_data(**kwargs)
+        context['htmx_show_reports'] = self.htmx_show_reports
+        context['htmx_show_per_page'] = self.htmx_show_per_page
+        context['htmx_show_filter_badges'] = self.htmx_show_filter_badges
+        return context
+
+    def get_show_filter(self, value: bool|None=None) -> bool:
+        """Apply HTMX-specific setting for filter sidebar."""
+        if self.request.htmx:
+            return super().get_show_filter(self.htmx_show_filter)
+        return super().get_show_filter(value)
+
+    def get_show_links(self, value: bool|None=None) -> bool:
+        """Apply HTMX-specific setting for navigation links."""
+        if self.request.htmx:
+            return super().get_show_links(self.htmx_show_links)
+        return super().get_show_links(value)
+
+    def get_show_filter_badges(self, value: bool|None=None) -> bool:
+        """Apply HTMX-specific setting for filter badges."""
+        if self.request.htmx:
+            return super().get_show_filter_badges(self.htmx_show_filter_badges)
+        return super().get_show_filter_badges(value)
+
+    def get_show_search_bar(self, value: bool|None=None) -> bool:
+        """Apply HTMX-specific setting for search bar."""
+        if self.request.htmx:
+            return super().get_show_search_bar(self.htmx_show_search_bar)
+        return super().get_show_search_bar(value)
+
+    def get_show_reports(self, value: bool|None=None) -> bool:
+        """Apply HTMX-specific setting for reports section."""
+        if self.request.htmx:
+            return super().get_show_reports(self.htmx_show_reports)
+        return super().get_show_reports(value)
+
+    def get_show_create_button(self, value: bool | None = None) -> bool:
+        """Apply HTMX-specific setting for create button."""
+        if self.request.htmx:
+            return super().get_show_create_button(self.htmx_show_create_button)
+        return super().get_show_create_button(value)
+
+    def get_show_per_page_selector(self, value: bool|None=None) -> bool:
+        """Apply HTMX-specific setting for per-page selector."""
+        if self.request.htmx:
+            return super().get_show_per_page_selector(self.htmx_show_per_page_selector)
+        return super().get_show_per_page_selector(value)
+
+    def get_show_table_name(self, value: bool | None = None) -> bool:
+        """Apply HTMX-specific setting for table name display."""
+        if self.request.htmx:
+            return super().get_show_table_name(self.htmx_show_table_name)
+        return super().get_show_table_name(value)
+
+    def get_show_export_button(self, value: bool | None = None) -> bool:
+        """Apply HTMX-specific setting for export button."""
+        if self.request.htmx:
+            return super().get_show_export_button(self.htmx_show_export_button)
+        return super().get_show_export_button(value)

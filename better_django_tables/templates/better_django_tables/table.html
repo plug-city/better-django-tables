@@ -1,0 +1,98 @@
+{% load static %}
+{% load render_table from django_tables2 %}
+{% load querystring from django_tables2 %}
+{% load delete_modal %}
+
+
+<div class="container-fluid">
+  <div class="row">
+
+    <!-- Sidebar -->
+    {% if show_filter %}
+    {% include "better_django_tables/filters/sidebar_filter.html" %}
+    {% endif %}
+
+    <!-- Main content -->
+    <div class="col" style="overflow-x: auto; min-width: 0;">
+
+      <!-- Navigation Links -->
+      {% if show_links %}
+      {% include "better_django_tables/partials/links.html" %}
+      {% endif %}
+
+      <!-- Table Name and Controls Row -->
+      <div class="d-flex justify-content-between align-items-center mb-1">
+
+        <!-- Table Name -->
+        <div>
+          {% if show_table_name %}
+            <h4 class="mb-0">{{table.table_name}}</h4>
+          {% endif %}
+        </div>
+
+        <!-- Controls -->
+        <div class="d-flex gap-2">
+          <!-- Active Filters Badges -->
+          {% if show_filter_badges %}
+          {% include "better_django_tables/filters/active_filter_badges.html" %}
+          {% endif %}
+
+          <!-- Search Bar -->
+          {% if show_search_bar %}
+          {% include "better_django_tables/filters/searchbar_filter.html" %}
+          {% endif %}
+
+          <!-- Reports Section -->
+          {% if available_reports is not None and show_reports %}
+            {% include "better_django_tables/reports/reports.html" %}
+          {% endif %}
+
+          <!-- Create URL -->
+          {% if table.add_create_button and show_create_button %}
+          <div class="col-auto">
+              <a href="{% url table.create_url %}" class="btn btn-outline-primary btn-sm" role="button" aria-pressed="true">
+                <i class="bi bi-plus-lg"></i> {% if table.create_url_label %}{{table.create_url_label}}{% else %}New Record{% endif %}
+              </a>
+          </div>
+          {% endif %}
+
+          <!-- Per Page Selector -->
+          {% if show_per_page_selector %}
+          <div class="col-auto">
+            {% include "better_django_tables/partials/per_page_selector.html" %}
+          </div>
+          {% endif %}
+
+          <!-- Export Buttons -->
+          {% if show_export_button %}
+            <div class="col-auto">
+              <a class="btn btn-info btn-sm" href="{% querystring '_export'='csv' %}" role="button">Export CSV</a>
+            </div>
+          {% endif %}
+        </div>
+
+      </div>
+      <!-- End Table Name and Controls Row -->
+
+      {% comment %} {% if column_selection_form %}
+        {% include "mutablecolumns/form.html" %}
+      {% endif %} {% endcomment %}
+
+      {% include "better_django_tables/partials/bulk_actions.html" %}
+      <div class="table-responsive">
+        {% render_table table %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% comment %} {% if delete_modal_loaded %}
+    {% render_delete_modal table %}
+    {% with delete_modal_loaded=True %}
+    {% endwith %}
+{% endif %} {% endcomment %}
+
+
+{% block javascript %}
+  <script src="{% static 'better_django_tables/js/bulk_actions.js' %}"></script>
+{% endblock %}
