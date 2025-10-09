@@ -584,5 +584,14 @@ class HtmxTableMixin:
 
     htmx_template_name = "better_django_tables/tables/bootstrap5-htmx-table.html"
 
+    def __init__(self, *args, htmx_template_name=None, htmx_show_per_page:bool=None,
+                 **kwargs):
+        super().__init__(*args, **kwargs)
+        if htmx_template_name is not None:
+            self.htmx_template_name = htmx_template_name
+        if htmx_show_per_page is not None:
+            self.htmx_show_per_page = htmx_show_per_page
+
     def get_htmx_template_name(self):
         return self.htmx_template_name
+

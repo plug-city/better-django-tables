@@ -9,17 +9,23 @@ from django_tables2 import SingleTableMixin
 
 from better_django_tables.view_mixins import (
     NextViewMixin,
-    ActiveFilterMixin,
+    # ActiveFilterMixin,
     BulkActionViewMixin,
-    ReportableViewMixin,
-    BetterMultiTableMixin,
-    HtmxTableViewMixin
+    # ReportableViewMixin,
+    # BetterMultiTableMixin,
+    HtmxTableViewMixin,
+    # PerPageViewMixin,
+    # ShowFilterMixin,
+    SelectColumnsViewMixin,
+    # LinksMixin,
 )
 from better_django_tables import models, filters, tables
 
 
-class TableView(NextViewMixin, ActiveFilterMixin, BulkActionViewMixin,
-                ReportableViewMixin, HtmxTableViewMixin, SingleTableMixin, FilterView):
+
+class TableView(NextViewMixin, BulkActionViewMixin,
+                SelectColumnsViewMixin, HtmxTableViewMixin,
+                SingleTableMixin, FilterView):
     """
     TableView is a reusable base class for Django views that display tabular data using django-tables2 and django-filter.
 
@@ -203,3 +209,4 @@ class RenderRowMixin:
         if hasattr(self, 'table_kwargs'):
             kwargs.update(self.table_kwargs)
         return kwargs or {}
+
