@@ -9,13 +9,14 @@
       {# Use dynamic per_page_options from context if available #}
       {% for option in per_page_options %}
         <li>
-          <a class="dropdown-item {% if option == current_per_page %}active{% endif %}" 
+          <a class="dropdown-item {% if option == current_per_page %}active{% endif %}"
              href="{% querystring 'per_page'=option %}"
              {% if request.htmx %}
-             hx-get="{% querystring 'per_page'=option %}"
-             hx-target="closest .inline-table, closest main"
+             hx-get="{{ request.path }}{% querystring 'per_page'=option %}"
+             hx-target="closest .bdt-table-container"
              hx-swap="outerHTML"
              hx-push-url="true"
+             hx-indicator="#htmx-indicator"
              {% endif %}>
             {{ option }}
           </a>
@@ -23,12 +24,12 @@
       {% endfor %}
     {% else %}
       {# Fallback to hardcoded options #}
-      <li><a class="dropdown-item" href="{% querystring 'per_page'=10 %}" {% if request.htmx %}hx-get="{% querystring 'per_page'=10 %}" hx-target="closest .inline-table, closest main" hx-swap="outerHTML" hx-push-url="true"{% endif %}>10</a></li>
-      <li><a class="dropdown-item" href="{% querystring 'per_page'=25 %}" {% if request.htmx %}hx-get="{% querystring 'per_page'=25 %}" hx-target="closest .inline-table, closest main" hx-swap="outerHTML" hx-push-url="true"{% endif %}>25</a></li>
-      <li><a class="dropdown-item" href="{% querystring 'per_page'=50 %}" {% if request.htmx %}hx-get="{% querystring 'per_page'=50 %}" hx-target="closest .inline-table, closest main" hx-swap="outerHTML" hx-push-url="true"{% endif %}>50</a></li>
-      <li><a class="dropdown-item" href="{% querystring 'per_page'=100 %}" {% if request.htmx %}hx-get="{% querystring 'per_page'=100 %}" hx-target="closest .inline-table, closest main" hx-swap="outerHTML" hx-push-url="true"{% endif %}>100</a></li>
-      <li><a class="dropdown-item" href="{% querystring 'per_page'=500 %}" {% if request.htmx %}hx-get="{% querystring 'per_page'=500 %}" hx-target="closest .inline-table, closest main" hx-swap="outerHTML" hx-push-url="true"{% endif %}>500</a></li>
-      <li><a class="dropdown-item" href="{% querystring 'per_page'=1000 %}" {% if request.htmx %}hx-get="{% querystring 'per_page'=1000 %}" hx-target="closest .inline-table, closest main" hx-swap="outerHTML" hx-push-url="true"{% endif %}>1000</a></li>
+      <li><a class="dropdown-item" href="{% querystring 'per_page'=10 %}" {% if request.htmx %}hx-get="{{ request.path }}{% querystring 'per_page'=10 %}" hx-target="closest .bdt-table-container" hx-swap="outerHTML" hx-push-url="true"{% endif %}>10</a></li>
+      <li><a class="dropdown-item" href="{% querystring 'per_page'=25 %}" {% if request.htmx %}hx-get="{{ request.path }}{% querystring 'per_page'=25 %}" hx-target="closest .bdt-table-container" hx-swap="outerHTML" hx-push-url="true"{% endif %}>25</a></li>
+      <li><a class="dropdown-item" href="{% querystring 'per_page'=50 %}" {% if request.htmx %}hx-get="{{ request.path }}{% querystring 'per_page'=50 %}" hx-target="closest .bdt-table-container" hx-swap="outerHTML" hx-push-url="true"{% endif %}>50</a></li>
+      <li><a class="dropdown-item" href="{% querystring 'per_page'=100 %}" {% if request.htmx %}hx-get="{{ request.path }}{% querystring 'per_page'=100 %}" hx-target="closest .bdt-table-container" hx-swap="outerHTML" hx-push-url="true"{% endif %}>100</a></li>
+      <li><a class="dropdown-item" href="{% querystring 'per_page'=500 %}" {% if request.htmx %}hx-get="{{ request.path }}{% querystring 'per_page'=500 %}" hx-target="closest .bdt-table-container" hx-swap="outerHTML" hx-push-url="true"{% endif %}>500</a></li>
+      <li><a class="dropdown-item" href="{% querystring 'per_page'=1000 %}" {% if request.htmx %}hx-get="{{ request.path }}{% querystring 'per_page'=1000 %}" hx-target="closest .bdt-table-container" hx-swap="outerHTML" hx-push-url="true"{% endif %}>1000</a></li>
     {% endif %}
   </ul>
 </div>

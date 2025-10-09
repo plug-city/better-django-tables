@@ -1,6 +1,7 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring,too-few-public-methods
 import logging
 import csv
+from urllib.parse import urlparse
 
 from itertools import count
 
@@ -10,6 +11,7 @@ from django.db.models import Q
 from django.core.exceptions import ImproperlyConfigured
 from django.views.generic.base import TemplateResponseMixin
 from django.http import StreamingHttpResponse
+from django.urls import resolve
 
 from django_tables2.views import TableMixinBase
 from django_tables2 import RequestConfig
@@ -647,9 +649,10 @@ class PerPageViewMixin:
             per_page_options = [10, 25, 50, 100]
             default_per_page = 25
     """
-    per_page_options = [10, 25, 50, 100, 101, 500, 1000]
+    per_page_options = [10, 25, 50, 100, 500, 1000]
     default_per_page = 25
-    per_page_session_key = 'table_per_page'
+    per_page_session_key: str|None = None
+    default_per_page_session_key = 'table_per_page'
     paginate_by: int | None
     show_per_page_selector: bool | None = None
     default_show_per_page_selector: bool = True
@@ -683,7 +686,6 @@ class PerPageViewMixin:
                     return per_page
             except (ValueError, TypeError):
                 pass
-
         # Check session for saved preference
         session_per_page = self.request.session.get(self.get_per_page_session_key())
         if session_per_page and session_per_page in self.per_page_options:
@@ -697,8 +699,22 @@ class PerPageViewMixin:
         # Finally, use default_per_page
         return self.default_per_page
 
-    def get_per_page_session_key(self):
-        return self.per_page_session_key
+    def get_per_page_session_key(self, view_name: str|None=None) -> str:
+        """Return the session key used to store per-page preference."""
+        try:
+            # Try to build a unique key based on view name and table name
+            if not view_name:
+                view_name = self.request.resolver_match.view_name
+            table_name = self.get_table_class().__name__
+            return f'per_page_{table_name}_{view_name}'
+        except Exception:
+            logger.warning('Could not determine unique per_page_session_key, using default.')
+            # Fallback to the default key if any error occurs
+            pass
+        if self.per_page_session_key:
+            return self.per_page_session_key
+
+        return self.default_per_page_session_key
 
     def get_show_per_page_selector(self, value: bool|None=None) -> bool:
         """
@@ -958,7 +974,7 @@ class ShowTableNameViewMixin:
 class Echo:
     """
     A minimal file-like object that implements only the write method.
-    
+
     Used for streaming CSV exports without buffering the entire file in memory.
     Instead of storing data in a buffer, it immediately returns the value written.
     """
@@ -1059,14 +1075,14 @@ class StreamExportMixin:
         """
         # Get the table with all current filters/config applied
         table = self.get_table(**self.get_table_kwargs())
-        
+
         # Get table data as rows (list of lists)
         rows = table.as_values(exclude_columns=self.exclude_columns)
-        
+
         # Create CSV writer with streaming buffer
         pseudo_buffer = Echo()
         writer = csv.writer(pseudo_buffer)
-        
+
         # Create streaming response
         return StreamingHttpResponse(
             (writer.writerow(row) for row in rows),
@@ -1091,7 +1107,7 @@ class StreamExportMixin:
             HttpResponse: Either a CSV export or normal template response
         """
         export_format = self.request.GET.get(self.export_trigger_param, None)
-        
+
         if export_format:
             return self.create_export(export_format)
 
@@ -1176,10 +1192,10 @@ class HtmxTableViewMixin(ActiveFilterMixin, ShowFilterMixin, LinksMixin, Searchb
     def get_template_names(self):
         """
         Return a list of template names to be used for the request.
-        
+
         Uses htmx_template_name for HTMX requests (partial updates),
         otherwise falls back to the default template (full page render).
-        
+
         Returns:
             list: List of template name strings
         """
@@ -1190,7 +1206,7 @@ class HtmxTableViewMixin(ActiveFilterMixin, ShowFilterMixin, LinksMixin, Searchb
     def get_context_data(self, **kwargs):
         """
         Add HTMX-specific context variables.
-        
+
         These are used by templates to conditionally show/hide elements
         based on whether the request is an HTMX partial update.
         """
@@ -1253,3 +1269,35 @@ class HtmxTableViewMixin(ActiveFilterMixin, ShowFilterMixin, LinksMixin, Searchb
         if self.request.htmx:
             return super().get_show_export_button(self.htmx_show_export_button)
         return super().get_show_export_button(value)
+
+    def get_per_page_session_key(self):
+        """
+        Override to handle HTMX requests by using the originating view's name.
+
+        For HTMX requests, attempts to use the originating view's name from HX-Current-URL
+        to ensure per-page settings persist across the parent view, not just the HTMX endpoint.
+        """
+        # For HTMX requests, try to get the originating view name
+        if hasattr(self.request, 'htmx') and self.request.htmx:
+            current_url = self.request.headers.get('HX-Current-URL')
+            if current_url:
+                # Parse the current URL to get the path
+                try:
+                    parsed_url = urlparse(current_url)
+                    resolved = resolve(parsed_url.path)
+                    return super().get_per_page_session_key(resolved.view_name)
+                    # # Temporarily override the view_name in resolver_match
+                    # # This allows the parent's get_per_page_session_key to use the correct view_name
+                    # original_view_name = self.request.resolver_match.view_name
+                    # self.request.resolver_match.view_name = resolved.view_name
+                    # try:
+                    #     session_key = super().get_per_page_session_key()
+                    #     return session_key
+                    # finally:
+                    #     # Restore original view_name
+                    #     self.request.resolver_match.view_name = original_view_name
+                except Exception as e:
+                    logger.debug('Could not resolve HTMX current URL: %s', e)
+
+        # Fall back to parent implementation for non-HTMX requests
+        return super().get_per_page_session_key()
