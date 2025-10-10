@@ -212,7 +212,6 @@ class BulkActionViewMixin:
                 messages.warning(request, "No items were deleted.")
         except Exception as e:
             messages.error(request, f"Error deleting items: {str(e)}")
-            print(f"{e}")
         # Redirect to the same page to prevent re-submission
         return redirect(self.get_success_url())
 
@@ -241,7 +240,6 @@ class BulkActionViewMixin:
         except Exception as e:
             logger.exception("Error during bulk delete: %s", e)
             messages.error(request, f"Error deleting items: {str(e)}")
-            print(f"{e}")
         # Redirect to the same page to prevent re-submission
         return redirect(self.get_success_url())
 
@@ -585,7 +583,6 @@ class SelectColumnsViewMixin:
 
         # Calculate columns to exclude (everything not selected)
         exclude_columns = list(all_columns - selected_columns)
-        print(f'Excluding columns: {exclude_columns} based on selection: {select_columns_params}')
         return exclude_columns
 
 
@@ -682,14 +679,12 @@ class PerPageViewMixin:
                 if per_page in self.per_page_options:
                     # Save to session
                     self.request.session[self.get_per_page_session_key()] = per_page
-                    print(f'set per page in session cookies to: {per_page=} | {self.get_per_page_session_key()=}')
                     return per_page
             except (ValueError, TypeError):
                 pass
         # Check session for saved preference
         session_per_page = self.request.session.get(self.get_per_page_session_key())
         if session_per_page and session_per_page in self.per_page_options:
-            print(f'retrieved per page from session cookies: {session_per_page=} | {self.get_per_page_session_key()=}')
             return session_per_page
 
         # Fall back to view's paginate_by attribute if set
