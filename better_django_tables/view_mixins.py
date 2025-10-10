@@ -797,7 +797,13 @@ class LinksMixin:
             model = MyModel
             table_class = MyTable
             links = [
-                {'url': '/some/url/', 'label': 'Some Link'},
+                {
+                    'url': '/some/url/',
+                    'label': 'Some Link',
+                    'method': 'get',  # Optional, defaults to 'get'
+                    'confirm_message': 'Are you sure?',
+                    'button_type': 'primary',  # defaults to btn-primary
+                },
                 {'url': '/another/url/', 'label': 'Another Link'},
             ]
     """
@@ -914,7 +920,7 @@ class ShowCreateButtonMixin:
             return show_param.lower() in ['1', 'true', 'yes']
         if value is not None:
             return value
-        if self.show_create_button is None:
+        if self.show_create_button is not None:
             return self.show_create_button
         return self.default_show_create_button
 
