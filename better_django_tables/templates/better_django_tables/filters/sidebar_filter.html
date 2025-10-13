@@ -1,12 +1,22 @@
 {% if filter %}
 <!-- Toggle button for sidebar (only shown on small screens) -->
-  <div class="mb-2 d-lg-none">
-    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterSidebar" aria-expanded="false" aria-controls="filterSidebar">
+  <div class="mb-2">
+    <button 
+      class="btn btn-outline-secondary btn-sm" 
+      type="button" 
+      data-bs-toggle="collapse" 
+      data-bs-target="#filterSidebar" 
+      aria-expanded="{% if toggle_filter %}true{% else %}false{% endif %}" 
+      aria-controls="filterSidebar"
+      hx-post="{{ request.path }}"
+      hx-vals='{"toggle_filter": "true"}'
+      hx-swap="none"
+      {% if request.GET %}hx-include="none"{% endif %}>
       Toggle Filters
     </button>
   </div>
 
-  <nav id="filterSidebar" class="col-md-3 col-lg-2 bg-light sidebar collapse d-lg-block">
+  <nav id="filterSidebar" class="col-md-3 col-lg-2 bg-light sidebar collapse {% if toggle_filter %}show{% endif %} p-3 mb-3 mb-md-0">
     <div class="position-sticky pt-3">
       <form action="" method="get" class="form">
       <h5>Filters</h5>

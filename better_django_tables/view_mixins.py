@@ -12,6 +12,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.views.generic.base import TemplateResponseMixin
 from django.http import StreamingHttpResponse
 from django.urls import resolve
+from django.http import HttpResponse
 
 from django_tables2.views import TableMixinBase
 from django_tables2 import RequestConfig
@@ -20,6 +21,7 @@ from better_django_tables import models, forms
 
 
 logger = logging.getLogger(__name__)
+
 
 class NextViewMixin:
     """
@@ -176,6 +178,18 @@ class BulkActionViewMixin:
         context = super().get_context_data(**kwargs)
         context['redirect_url'] = self.request.GET.get('next', self.request.path)
         return context
+
+
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST requests for bulk actions.
+        This method checks for selected items and performs the appropriate bulk action.
+        """
+        if 'bulk_action' in request.POST:
+            logger.debug('Handling bulk action POST request')
+            return self.handle_bulk_action(request)
+        logger.debug('No bulk action found in POST, passing to super()')
+        return super().post(request, *args, **kwargs)
 
 
     def handle_bulk_action(self, request):
@@ -759,6 +773,7 @@ class ShowFilterMixin:
             show_filter = True  # or False to hide
     """
     show_filter: bool = True
+    toggle_filter: bool = True
 
     def get_show_filter(self, value: bool|None=None) -> bool:
         """
@@ -781,7 +796,56 @@ class ShowFilterMixin:
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['show_filter'] = self.get_show_filter()
+        context['toggle_filter'] = self.get_toggle_filter()
         return context
+
+    def get_toggle_filter(self):
+        """
+        Get the context boolean for toggling the filter sidebar.
+        Save the preference in session.
+        """
+        session_key = self.get_toggle_filter_session_key()
+        toggle = self.request.GET.get('toggle_filter')
+        if toggle is not None:
+            toggle_value = toggle.lower() in ['1', 'true', 'yes']
+            self.request.session[session_key] = toggle_value
+            return toggle_value
+
+        session_value = self.request.session.get(session_key)
+        if session_value is not None:
+            logger.info(f'Using session value ({session_value}) from key: {session_key}')
+            return session_value
+
+        return self.toggle_filter
+
+    def get_toggle_filter_session_key(self, view_name: str|None=None) -> str:
+        """Return the session key used to store toggle_filter preference."""
+        try:
+            # Try to build a unique key based on view name and table name
+            if not view_name:
+                view_name = self.request.resolver_match.view_name
+            return f'toggle_filter__{view_name}'
+        except Exception:  # pylint: disable=broad-except
+            logger.warning('Could not determine unique toggle_filter_session_key, using default.')
+            # Fallback to the default key if any error occurs
+
+        return f'toggle_filter__{self.__class__.__name__}'
+
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST requests to toggle the filter sidebar.
+        """
+        if 'toggle_filter' in request.POST:
+            logger.info('Handling toggle_filter POST request')
+            current_state = self.get_toggle_filter()
+            # Toggle the state
+            new_state = not current_state
+            session_key = self.get_toggle_filter_session_key()
+            request.session[session_key] = new_state
+            # Redirect to the same page to prevent re-submission
+            logger.info(f'Toggling filter sidebar to {new_state}, session_key={session_key}')
+            return HttpResponse(status=204, headers={'Toggle-Filter': 'true'})
+        return super().post(request, *args, **kwargs)
 
 
 class LinksMixin:
@@ -1212,6 +1276,7 @@ class HtmxTableViewMixin(ActiveFilterMixin, ShowFilterMixin, LinksMixin, Searchb
         based on whether the request is an HTMX partial update.
         """
         context = super().get_context_data(**kwargs)
+        context['is_htmx'] = hasattr(self.request, 'htmx') and self.request.htmx
         context['htmx_show_reports'] = self.htmx_show_reports
         context['htmx_show_per_page'] = self.htmx_show_per_page
         context['htmx_show_filter_badges'] = self.htmx_show_filter_badges

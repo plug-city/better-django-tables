@@ -1,3 +1,5 @@
+import logging
+
 from django.shortcuts import render
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
@@ -21,6 +23,8 @@ from better_django_tables.view_mixins import (
 )
 from better_django_tables import models, filters, tables
 
+
+logger = logging.getLogger(__name__)
 
 
 class TableView(NextViewMixin, BulkActionViewMixin,
@@ -50,12 +54,19 @@ class TableView(NextViewMixin, BulkActionViewMixin,
     The `post` method is overridden to handle both report actions and bulk actions in a single endpoint.
     """
 
-    def post(self, request, *args, **kwargs):
-        # Handle report actions first
-        if any(key in request.POST for key in ['save_report', 'toggle_favorite']):
-            return super().post(request, *args, **kwargs)  # ReportableMixin handles this
-        # Then handle bulk actions
-        return self.handle_bulk_action(request)
+    # def post(self, request, *args, **kwargs):
+
+    #     # Handle report actions first
+    #     if any(key in request.POST for key in ['save_report', 'toggle_favorite']):
+    #         return super().post(request, *args, **kwargs)  # ReportableMixin handles this
+    #     # Then handle bulk actions
+    #     return self.handle_bulk_action(request)
+
+    # def post(self, request, *args, **kwargs):
+    #     """
+    #     Handle POST requests for bulk actions.
+    #     """
+    #     return super().post(request, *args, **kwargs)
 
 
 class ReportListView(LoginRequiredMixin, SingleTableMixin, FilterView):

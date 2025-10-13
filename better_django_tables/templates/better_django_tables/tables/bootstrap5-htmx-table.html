@@ -11,8 +11,9 @@
       {% if column.orderable %}
       hx-get="{% querystring table.prefixed_order_by_field=column.order_by_alias.next %}"
       hx-trigger="click"
-      hx-target="div.inline-table"
+      hx-target="closest .bdt-table-container"
       hx-swap="outerHTML"
+      hx-indicator=".htmx-indicator"
       style="cursor: pointer;"
       {% endif %}>
     {{ column.header }}
@@ -34,8 +35,9 @@
                 <a
                     hx-get="{{ request.path_info }}{% querystring table.prefixed_page_field=table.page.previous_page_number %}"
                     hx-trigger="click"
-                    hx-target="div.inline-table"
+                    hx-target="closest .bdt-table-container"
                     hx-swap="outerHTML"
+                    hx-indicator=".htmx-indicator"
                     class="page-link"
                     style="cursor: pointer;">
                     <span aria-hidden="true">&laquo;</span>
@@ -52,8 +54,9 @@
                    {% if p != '...' %}
                    hx-get="{{ request.path_info }}{% querystring table.prefixed_page_field=p %}"
                    hx-trigger="click"
-                   hx-target="div.inline-table"
+                   hx-target="closest .bdt-table-container"
                    hx-swap="outerHTML"
+                   hx-indicator=".htmx-indicator"
                    style="cursor: pointer;"
                    {% endif %}>
                     {{ p }}
@@ -68,8 +71,9 @@
                 <a
                     hx-get="{{ request.path_info }}{% querystring table.prefixed_page_field=table.page.next_page_number %}"
                     hx-trigger="click"
-                    hx-target="div.inline-table"
+                    hx-target="closest .bdt-table-container"
                     hx-swap="outerHTML"
+                    hx-indicator=".htmx-indicator"
                     class="page-link"
                     style="cursor: pointer;">
                     {% trans 'next' %}
