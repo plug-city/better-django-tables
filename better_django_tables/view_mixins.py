@@ -1,6 +1,7 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring,too-few-public-methods
 import logging
 import csv
+import json
 from urllib.parse import urlparse
 
 from itertools import count
@@ -164,15 +165,61 @@ class ActiveFilterMixin:
 class BulkActionViewMixin:
     """
     Mixin for views that handle bulk actions. Provides methods for bulk delete.
+    
+    Attributes:
+        delete_method: Optional method that handles deletion of individual objects
+        bulk_delete_hx_trigger (str|dict): HX-Trigger value for bulk delete responses.
+            Can be a string for simple events or dict for events with details.
+            Default: 'bulkDeleteComplete'
+    
     Usage:
+        # Basic usage with default trigger
         class MyListView(BulkActionViewMixin, ListView):
             model = MyModel
-            self.delete_method = services.object_delete
+            delete_method = services.object_delete
 
             def post(self, request, *args, **kwargs):
                 return self.handle_bulk_action(request)
+        
+        # Custom single event trigger
+        class MyListView(BulkActionViewMixin, ListView):
+            model = MyModel
+            bulk_delete_hx_trigger = 'myCustomEvent'
+        
+        # Multiple events with details
+        class MyListView(BulkActionViewMixin, ListView):
+            model = MyModel
+            bulk_delete_hx_trigger = {
+                'itemsDeleted': {'count': 5},
+                'updateSidebar': {},
+                'showNotification': {'message': 'Items deleted successfully'}
+            }
+        
+        # Dynamic trigger based on runtime conditions
+        class MyListView(BulkActionViewMixin, ListView):
+            model = MyModel
+            
+            def get_bulk_delete_hx_trigger(self):
+                # Return different triggers based on conditions
+                if some_condition:
+                    return 'specialEvent'
+                return {'standardEvent': {}, 'refreshTable': {}}
     """
     delete_method = None  # Set this to the method that handles deletion
+    bulk_delete_hx_trigger = 'bulkDeleteComplete'  # Default HX-Trigger event
+
+    def get_bulk_delete_hx_trigger(self):
+        """
+        Get the HX-Trigger value for bulk delete responses.
+        
+        Can be overridden in subclasses to provide dynamic trigger values.
+        
+        Returns:
+            str or dict: HX-Trigger value. Can be:
+                - Simple string: 'eventName'
+                - JSON dict: {'event1': {}, 'event2': {'detail': 'value'}}
+        """
+        return self.bulk_delete_hx_trigger
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -186,7 +233,7 @@ class BulkActionViewMixin:
         This method checks for selected items and performs the appropriate bulk action.
         """
         if 'bulk_action' in request.POST:
-            logger.debug('Handling bulk action POST request')
+            logger.info('Handling bulk action POST request')
             return self.handle_bulk_action(request)
         logger.debug('No bulk action found in POST, passing to super()')
         return super().post(request, *args, **kwargs)
@@ -194,13 +241,16 @@ class BulkActionViewMixin:
 
     def handle_bulk_action(self, request):
         """Handle bulk action POST requests."""
+        print("In handle_bulk_action")
         selected_items = request.POST.getlist('selected_items')
+        print("Selected items:", selected_items)
         if not selected_items:
             messages.error(request, "No items were selected.")
             return self.get(request)
-
+        print("request.POST:", request.POST)
         # Handle bulk delete
         if 'selected_items' in request.POST:
+            print("Handling bulk delete_ selected items")
             return self.handle_bulk_delete(request, selected_items)
 
         return self.get(request)
@@ -226,6 +276,18 @@ class BulkActionViewMixin:
                 messages.warning(request, "No items were deleted.")
         except Exception as e:
             messages.error(request, f"Error deleting items: {str(e)}")
+
+        # For HTMX requests, return the updated table view
+        if request.htmx:
+            response = self.get(request)
+            hx_trigger = self.get_bulk_delete_hx_trigger()
+            # Handle both string and dict trigger values
+            if isinstance(hx_trigger, dict):
+                response['HX-Trigger'] = json.dumps(hx_trigger)
+            else:
+                response['HX-Trigger'] = hx_trigger
+            return response
+
         # Redirect to the same page to prevent re-submission
         return redirect(self.get_success_url())
 
@@ -254,6 +316,18 @@ class BulkActionViewMixin:
         except Exception as e:
             logger.exception("Error during bulk delete: %s", e)
             messages.error(request, f"Error deleting items: {str(e)}")
+
+        # For HTMX requests, return the updated table view
+        if request.htmx:
+            response = self.get(request)
+            hx_trigger = self.get_bulk_delete_hx_trigger()
+            # Handle both string and dict trigger values
+            if isinstance(hx_trigger, dict):
+                response['HX-Trigger'] = json.dumps(hx_trigger)
+            else:
+                response['HX-Trigger'] = hx_trigger
+            return response
+
         # Redirect to the same page to prevent re-submission
         return redirect(self.get_success_url())
 
