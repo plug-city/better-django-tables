@@ -152,9 +152,9 @@ class HtmxTableView(NextViewMixin, BulkActionViewMixin, SingleTableMixin, Filter
             return render(request, 'better_django_tables/partials/error_htmx_table.html',
                           {'error': str(e)}, status=500)
 
-    def post(self, request, *args, **kwargs):
-        # Handle bulk actions
-        return self.handle_bulk_action(request)
+    # def post(self, request, *args, **kwargs):
+    #     # Handle bulk actions
+    #     return self.handle_bulk_action(request)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

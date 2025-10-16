@@ -93,6 +93,7 @@ class BulkActionTableMixin(TableIdMixin):
     bulk_delete_url_name = None
     select_all_checkbox_id = None
     individual_checkbox_class = None
+    checkbox_class_attrs = 'form-check-input'
     is_bulk_action_table = True  # Toggle this to enable/disable the bulk action column
 
     def __new__(cls, *args, **kwargs):
@@ -130,7 +131,7 @@ class BulkActionTableMixin(TableIdMixin):
         if self.select_all_checkbox_id is None:
             self.select_all_checkbox_id = f"select-all-{self.table_id}"
         if self.individual_checkbox_class is None:
-            self.individual_checkbox_class = f"select-item-{self.table_id}"
+            self.individual_checkbox_class = f"select-item-{self.table_id} {self.checkbox_class_attrs}"
         # # Update the checkbox template for the actual column instance
         # if 'select' in self.columns:
         #     select_col = self.columns['select']
@@ -171,8 +172,9 @@ class BulkActionTableMixin(TableIdMixin):
     def get_select_all_checkbox(cls):
         """Return the HTML for the select all checkbox in the header."""
         return format_html(
-            '<input type="checkbox" id="{}" class="select-all-checkbox" title="Select All">',
-            cls.select_all_checkbox_id
+            '<input type="checkbox" id="{}" class="select-all-checkbox {}" title="Select All">',
+            cls.select_all_checkbox_id,
+            cls.checkbox_class_attrs,
         )
 
 

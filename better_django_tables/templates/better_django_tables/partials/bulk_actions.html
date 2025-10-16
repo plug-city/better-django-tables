@@ -41,7 +41,18 @@
                 <form id="bulk-delete-form" method="post" action="{% url table.bulk_delete_url_name %}" style="display: inline;">
                     {% csrf_token %}
                     <input type="hidden" name="next" id="redirectUrl" value="{{ redirect_url }}">
-                    <button type="submit" name="bulk_action" class="btn btn-danger">Delete Selected</button>
+                    <button type="submit"
+                            name="bulk_action"
+                            value="delete"
+                            class="btn btn-danger"
+                            hx-post="{% url table.bulk_delete_url_name %}{% querystring %}"
+                            hx-include="closest form"
+                            hx-target="closest .bdt-table-container"
+                            hx-swap="outerHTML"
+                            hx-indicator="#htmx-indicator"
+                            hx-on::before-request="bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal-{{ table.table_id }}')).hide()">
+                        Delete Selected
+                    </button>
                 </form>
             </div>
         </div>
