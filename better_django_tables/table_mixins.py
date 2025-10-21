@@ -294,6 +294,8 @@ class ActionsColumnMixin:
 
     Usage:
         class MyTable(ActionColumnMixin, tables.Table):
+            has_actions_column = True
+
             enable_view_action = True
             view_action_url_name = 'myapp:model_detail'
             enable_edit_action = True
@@ -328,9 +330,9 @@ class ActionsColumnMixin:
     actions = []
 
     # Standard Action Toggles
-    enable_view_action = True
-    enable_edit_action = True
-    enable_delete_action = True
+    enable_view_action = False
+    enable_edit_action = False
+    enable_delete_action = False
 
     view_action_url_name = None
     edit_action_url_name = None
