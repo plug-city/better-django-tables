@@ -64,13 +64,23 @@ class Table(TableMixin, tables.Table):
         is_editable_table = True
             Adds edit button column (legacy, use has_actions_column instead)
 
+    CREATE BUTTON
         add_create_button = True
             Adds "Create New" button above table
+        create_url = 'myapp:model_create'
+            URL name for create new record
 
+    BULK ACTIONS
+        is_bulk_action_table = True
+            Enables bulk action functionality
+
+        bulk_delete_url_name = 'myapp:list_view'
+            URL name for bulk operations
+
+    ACTIONS COLUMN:
         has_actions_column = True
             Adds Actions column with view/edit/delete buttons
 
-    ACTIONS COLUMN:
         enable_view_action = True
             Show view/detail button in actions column
 
@@ -109,12 +119,6 @@ class Table(TableMixin, tables.Table):
     HTMX:
         htmx_table = False
             Enable HTMX auto-refresh functionality
-
-        htmx_trigger_event = None
-            Event name to listen for (e.g., 'recordCreated')
-
-        htmx_swap = 'outerHTML'
-            HTMX swap method
 
     EXAMPLE:
         class ProductTable(Table):

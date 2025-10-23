@@ -165,13 +165,13 @@ class ActiveFilterMixin:
 class BulkActionViewMixin:
     """
     Mixin for views that handle bulk actions. Provides methods for bulk delete.
-    
+
     Attributes:
         delete_method: Optional method that handles deletion of individual objects
         bulk_delete_hx_trigger (str|dict): HX-Trigger value for bulk delete responses.
             Can be a string for simple events or dict for events with details.
             Default: 'bulkDeleteComplete'
-    
+
     Usage:
         # Basic usage with default trigger
         class MyListView(BulkActionViewMixin, ListView):
@@ -180,12 +180,12 @@ class BulkActionViewMixin:
 
             def post(self, request, *args, **kwargs):
                 return self.handle_bulk_action(request)
-        
+
         # Custom single event trigger
         class MyListView(BulkActionViewMixin, ListView):
             model = MyModel
             bulk_delete_hx_trigger = 'myCustomEvent'
-        
+
         # Multiple events with details
         class MyListView(BulkActionViewMixin, ListView):
             model = MyModel
@@ -194,11 +194,11 @@ class BulkActionViewMixin:
                 'updateSidebar': {},
                 'showNotification': {'message': 'Items deleted successfully'}
             }
-        
+
         # Dynamic trigger based on runtime conditions
         class MyListView(BulkActionViewMixin, ListView):
             model = MyModel
-            
+
             def get_bulk_delete_hx_trigger(self):
                 # Return different triggers based on conditions
                 if some_condition:
@@ -211,15 +211,18 @@ class BulkActionViewMixin:
     def get_bulk_delete_hx_trigger(self):
         """
         Get the HX-Trigger value for bulk delete responses.
-        
+
         Can be overridden in subclasses to provide dynamic trigger values.
-        
+
         Returns:
             str or dict: HX-Trigger value. Can be:
                 - Simple string: 'eventName'
                 - JSON dict: {'event1': {}, 'event2': {'detail': 'value'}}
         """
+        if isinstance(self.bulk_delete_hx_trigger, dict):
+            return json.dumps(self.bulk_delete_hx_trigger)
         return self.bulk_delete_hx_trigger
+
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -280,12 +283,13 @@ class BulkActionViewMixin:
         # For HTMX requests, return the updated table view
         if request.htmx:
             response = self.get(request)
-            hx_trigger = self.get_bulk_delete_hx_trigger()
+            # hx_trigger = self.get_bulk_delete_hx_trigger()
+            response['HX-Trigger'] = self.get_bulk_delete_hx_trigger()
             # Handle both string and dict trigger values
-            if isinstance(hx_trigger, dict):
-                response['HX-Trigger'] = json.dumps(hx_trigger)
-            else:
-                response['HX-Trigger'] = hx_trigger
+            # if isinstance(hx_trigger, dict):
+            #     response['HX-Trigger'] = json.dumps(hx_trigger)
+            # else:
+            #     response['HX-Trigger'] = hx_trigger
             return response
 
         # Redirect to the same page to prevent re-submission

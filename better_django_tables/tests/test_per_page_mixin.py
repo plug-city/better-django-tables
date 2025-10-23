@@ -2,13 +2,16 @@
 Tests for PerPageViewMixin
 """
 from django.test import TestCase, RequestFactory
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.views.generic import ListView
 from django_tables2 import SingleTableMixin
 from django_filters.views import FilterView
 
 from better_django_tables.view_mixins import PerPageViewMixin
+
+
+User = get_user_model()
 
 
 class MockModel:

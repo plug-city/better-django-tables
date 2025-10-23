@@ -8,20 +8,20 @@
   <div class="row">
 
     <!-- Sidebar -->
-     {% block filters %}
-    {% if show_filter %}
-    {% include "better_django_tables/filters/sidebar_filter.html" %}
-    {% endif %}
-     {% endblock filters %}
+    {% block filters %}
+      {% if show_filter %}
+        {% include "better_django_tables/filters/sidebar_filter.html" %}
+      {% endif %}
+    {% endblock filters %}
 
     <!-- Main content -->
     <div class="col" style="overflow-x: auto; min-width: 0;">
 
       <!-- Navigation Links -->
-       {% block links %}
-      {% if show_links %}
-      {% include "better_django_tables/partials/links.html" %}
-      {% endif %}
+      {% block links %}
+        {% if show_links %}
+          {% include "better_django_tables/partials/links.html" %}
+        {% endif %}
       {% endblock links %}
 
       <!-- Table Name and Controls Row -->
@@ -29,11 +29,11 @@
 
         <!-- Table Name -->
          {% block table_name %}
-        <div>
-          {% if show_table_name %}
-            <h4 class="mb-0">{{table.table_name}}</h4>
-          {% endif %}
-        </div>
+          <div>
+            {% if show_table_name %}
+              <h4 class="mb-0">{{table.table_name}}</h4>
+            {% endif %}
+          </div>
          {% endblock table_name %}
 
         <!-- Controls -->
@@ -42,51 +42,51 @@
           <!-- Active Filters Badges -->
           {% block filter_badges %}
             {% if show_filter_badges %}
-            {% include "better_django_tables/filters/active_filter_badges.html" %}
+              {% include "better_django_tables/filters/active_filter_badges.html" %}
             {% endif %}
           {% endblock filter_badges %}
 
           <!-- Search Bar -->
           {% block search_bar %}
             {% if show_search_bar %}
-            {% include "better_django_tables/filters/searchbar_filter.html" %}
+              {% include "better_django_tables/filters/searchbar_filter.html" %}
             {% endif %}
           {% endblock search_bar %}
 
           <!-- Reports Section -->
           {% block reports %}
-          {% if available_reports is not None and show_reports %}
-            {% include "better_django_tables/reports/reports.html" %}
-          {% endif %}
+            {% if available_reports is not None and show_reports %}
+              {% include "better_django_tables/reports/reports.html" %}
+            {% endif %}
           {% endblock reports %}
 
           <!-- Create URL -->
           {% block create_button %}
-          {% if table.add_create_button and show_create_button %}
-          <div class="col-auto">
-              <a href="{% url table.create_url %}" class="btn btn-outline-primary btn-sm" role="button" aria-pressed="true">
-                <i class="bi bi-plus-lg"></i> {% if table.create_url_label %}{{table.create_url_label}}{% else %}New Record{% endif %}
-              </a>
-          </div>
-          {% endif %}
+            {% if table.add_create_button and show_create_button %}
+              <div class="col-auto">
+                  <a href="{% url table.create_url %}" class="btn btn-outline-primary btn-sm" role="button" aria-pressed="true">
+                    <i class="bi bi-plus-lg"></i> {% if table.create_url_label %}{{table.create_url_label}}{% else %}New Record{% endif %}
+                  </a>
+              </div>
+            {% endif %}
           {% endblock create_button %}
 
           <!-- Per Page Selector -->
           {% block per_page_selector %}
-          {% if show_per_page_selector %}
-          <div class="col-auto">
-            {% include "better_django_tables/partials/per_page_selector.html" %}
-          </div>
-          {% endif %}
+            {% if show_per_page_selector %}
+              <div class="col-auto">
+                {% include "better_django_tables/partials/per_page_selector.html" %}
+              </div>
+            {% endif %}
           {% endblock per_page_selector %}
 
           <!-- Export Buttons -->
           {% block export %}
-          {% if show_export_button %}
-            <div class="col-auto">
-              <a class="btn btn-info btn-sm" href="{% querystring '_export'='csv' %}" role="button">Export CSV</a>
-            </div>
-          {% endif %}
+            {% if show_export_button %}
+              <div class="col-auto">
+                <a class="btn btn-info btn-sm" href="{% querystring '_export'='csv' %}" role="button">Export CSV</a>
+              </div>
+            {% endif %}
           {% endblock export %}
         </div>
 
@@ -97,7 +97,7 @@
         {% include "mutablecolumns/form.html" %}
       {% endif %} {% endcomment %}
       {% block bulk_actions %}
-      {% include "better_django_tables/partials/bulk_actions.html" %}
+        {% include "better_django_tables/partials/bulk_actions.html" %}
       {% endblock bulk_actions %}
 
       <div class="table-responsive">

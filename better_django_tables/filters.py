@@ -1,6 +1,5 @@
 import django_filters
 from django_filters.widgets import RangeWidget, BooleanWidget
-# from django.contrib.auth.models import User
 from django import forms
 from django.db.models import Q
 from django.contrib.auth.models import Group
