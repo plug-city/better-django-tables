@@ -144,7 +144,6 @@ class Table(TableMixin, tables.Table):
 
             # HTMX
             htmx_table = True
-            htmx_trigger_event = 'productUpdated'
 
             class Meta:
                 model = Product

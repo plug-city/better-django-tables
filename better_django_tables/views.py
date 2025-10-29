@@ -44,6 +44,7 @@ class TableView(NextViewMixin, BulkActionViewMixin,
         filterset_class: The django-filter FilterSet class for filtering (optional).
         template_name: The template to use for rendering the view (optional).
         bulk_delete_url_name: The URL name for bulk delete actions (optional).
+        bulk_delete_hx_trigger: The HTMX trigger event name for bulk delete actions (optional).
 
     Methods to override in subclasses:
         get_queryset(self): Return the queryset for the table.
