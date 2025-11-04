@@ -1,0 +1,252 @@
+{% comment %}
+Save and Next navigation buttons for update views.
+
+Usage:
+    {% include 'better_django_tables/partials/save_and_next_buttons.html' %}
+
+    Or with custom form ID:
+    {% include 'better_django_tables/partials/save_and_next_buttons.html' with form_id='my-form-id' %}
+
+Context variables:
+    - save_and_next.enabled: Boolean indicating if navigation is enabled
+    - save_and_next.form_id: Optional form ID for the submit buttons
+    - save_and_next.close_url: URL to redirect to when canceling or closing
+    - save_and_next.next.available: Boolean indicating if there's a next record
+    - save_and_next.next.url: URL to next record
+    - save_and_next.previous.available: Boolean indicating if there's a previous record
+    - save_and_next.previous.url: URL to previous record
+    - save_and_next.position.current: Current position in the list (1-indexed)
+    - save_and_next.position.total: Total number of records in the navigation list
+{% endcomment %}
+
+{% if save_and_next.enabled %}
+
+<div class="save-and-next-navigation d-flex justify-content-start align-items-center gap-2">
+    <div class="d-flex flex-column align-items-center gap-0 lh-1">
+        {% if save_and_next.position %}
+            <div class="navigation-info">
+                <small class="text-muted" style="font-size: 0.75rem;">
+                    Record {{ save_and_next.position.current }} of {{ save_and_next.position.total }}
+                </small>
+            </div>
+        {% endif %}
+
+        {% if save_and_next.previous.available or save_and_next.next.available %}
+            <div class="navigation-links">
+                <small style="font-size: 0.75rem;">
+                    {% if save_and_next.previous.available %}
+                    <a href="{{ save_and_next.previous.url }}" class="text-decoration-none" title="Go to previous without saving">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </a>
+                    {% endif %}
+
+                    {% if save_and_next.previous.available and save_and_next.next.available %}
+                    <span class="mx-1">|</span>
+                    {% endif %}
+
+                    {% if save_and_next.next.available %}
+                    <a href="{{ save_and_next.next.url }}" class="text-decoration-none" title="Go to next without saving">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </a>
+                    {% endif %}
+                </small>
+            </div>
+        {% endif %}
+
+    </div>
+
+    {# Split button with dropdown for save options #}
+    <div>
+        <div class="btn-group" role="group">
+            {# Main save button - executes the currently selected save action #}
+            <button type="submit"
+                    name="save_action"
+                    id="save-button"
+                    class="btn btn-sm btn-success"
+                    data-save-action="save"
+                    {% if form_id %}form="{{ form_id }}"{% elif save_and_next.form_id %}form="{{ save_and_next.form_id }}"{% endif %}>
+                <i id="save-button-icon" class="bi bi-save"></i> <span id="save-button-text">Save</span>
+            </button>
+
+            {# Dropdown toggle #}
+            <button type="button"
+                    class="btn btn-sm btn-success dropdown-toggle dropdown-toggle-split"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false">
+                <span class="visually-hidden">Toggle save options</span>
+            </button>
+
+            {# Dropdown menu with save options #}
+            <ul class="dropdown-menu dropdown-menu-end">
+                {% comment %} <li>
+                    <a class="dropdown-item save-option"
+                    href="#"
+                    data-action="save"
+                    data-label="Save"
+                    data-icon="bi-save">
+                        <i class="bi bi-save"></i> Save
+                    </a>
+                </li> {% endcomment %}
+                <li>
+                    <a class="dropdown-item save-option"
+                    href="#"
+                    data-action="save_and_close"
+                    data-label="Save & Close"
+                    data-icon="bi-x-circle">
+                        <i class="bi bi-x-circle"></i> Save & Close
+                    </a>
+                </li>
+                {% if save_and_next.next.available %}
+                <li>
+                    <a class="dropdown-item save-option"
+                    href="#"
+                    data-action="save_and_next"
+                    data-label="Save & Next"
+                    data-icon="bi-chevron-right">
+                        <i class="bi bi-chevron-right"></i> Save & Next
+                    </a>
+                </li>
+                {% endif %}
+                {% if save_and_next.previous.available %}
+                <li>
+                    <a class="dropdown-item save-option"
+                    href="#"
+                    data-action="save_and_previous"
+                    data-label="Save & Previous"
+                    data-icon="bi-chevron-left">
+                        <i class="bi bi-chevron-left"></i> Save & Previous
+                    </a>
+                </li>
+                {% endif %}
+                <li>
+                    <a class="dropdown-item save-option"
+                    href="#"
+                    data-action="save_and_continue"
+                    data-label="Save & Continue Editing"
+                    data-icon="bi-pencil-square">
+                        <i class="bi bi-pencil-square"></i> Save & Keep Working
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        {# Cancel button #}
+        {% if save_and_next.close_url %}
+        <a href="{{ save_and_next.close_url }}"
+           class="btn btn-sm btn-light ms-1">
+            Cancel
+        </a>
+        {% else %}
+        <button type="button"
+                onclick="history.back()"
+                class="btn btn-sm btn-light ms-1">
+            Cancel
+        </button>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endif %}
+
+<script>
+(function() {
+    // Session storage key for remembering save preference
+    const SAVE_PREF_KEY = 'bdt_save_preference';
+
+    // Get the save button and text elements
+    const saveButton = document.getElementById('save-button');
+    const saveButtonText = document.getElementById('save-button-text');
+    const saveButtonIcon = document.getElementById('save-button-icon');
+
+    if (!saveButton || !saveButtonText || !saveButtonIcon) return;
+
+    // Load saved preference from sessionStorage
+    function loadSavePreference() {
+        const saved = sessionStorage.getItem(SAVE_PREF_KEY);
+        if (saved) {
+            try {
+                const pref = JSON.parse(saved);
+                saveButton.setAttribute('data-save-action', pref.action);
+                saveButtonText.textContent = pref.label;
+                updateButtonIcon(pref.icon);
+
+                // Update button name attribute based on action
+                updateButtonName(pref.action);
+            } catch (e) {
+                console.error('Error loading save preference:', e);
+            }
+        }
+    }
+
+    // Save preference to sessionStorage
+    function saveSavePreference(action, label, icon) {
+        sessionStorage.setItem(SAVE_PREF_KEY, JSON.stringify({
+            action: action,
+            label: label,
+            icon: icon
+        }));
+    }
+
+    // Update the button's icon
+    function updateButtonIcon(iconClass) {
+        // Remove all bi-* classes
+        saveButtonIcon.className = saveButtonIcon.className
+            .split(' ')
+            .filter(c => !c.startsWith('bi-'))
+            .join(' ');
+        // Add the new icon class
+        saveButtonIcon.classList.add(iconClass);
+    }
+
+    // Update the button's name attribute based on action
+    function updateButtonName(action) {
+        // Remove all possible name attributes first
+        saveButton.removeAttribute('name');
+
+        // Set the appropriate name based on action
+        saveButton.setAttribute('name', action);
+    }
+
+    // Handle save option clicks
+    document.querySelectorAll('.save-option').forEach(function(option) {
+        option.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            const action = this.getAttribute('data-action');
+            const label = this.getAttribute('data-label');
+            const icon = this.getAttribute('data-icon');
+
+            // Update the button
+            saveButton.setAttribute('data-save-action', action);
+            saveButtonText.textContent = label;
+            updateButtonIcon(icon);
+            updateButtonName(action);
+
+            // Save preference
+            saveSavePreference(action, label, icon);
+
+            // Close dropdown (Bootstrap 5)
+            const dropdown = bootstrap.Dropdown.getInstance(
+                document.querySelector('[data-bs-toggle="dropdown"]')
+            );
+            if (dropdown) {
+                dropdown.hide();
+            }
+        });
+    });
+
+    // Load preference on page load
+    loadSavePreference();
+
+    // Handle form submission to ensure correct action is set
+    const form = saveButton.closest('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Make sure the button has the correct name before submission
+            const currentAction = saveButton.getAttribute('data-save-action');
+            updateButtonName(currentAction);
+        });
+    }
+})();
+</script>

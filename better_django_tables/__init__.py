@@ -9,6 +9,11 @@ from .table_mixins import (
     BootstrapTableMixin,
 )
 
+from .view_mixins import (
+    SaveAndNextMixin,
+    NavigationStorageMixin,
+)
+
 __all__ = [
     'ActionsColumnMixin',
     'DeletableTableMixin',
@@ -18,4 +23,6 @@ __all__ = [
     'CreateTableMixin',
     'TableNameMixin',
     'BootstrapTableMixin',
+    'SaveAndNextMixin',
+    'NavigationStorageMixin',
 ]

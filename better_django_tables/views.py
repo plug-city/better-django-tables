@@ -11,6 +11,7 @@ from django_tables2 import SingleTableMixin
 
 from better_django_tables.view_mixins import (
     NextViewMixin,
+    NavigationStorageMixin,
     # ActiveFilterMixin,
     BulkActionViewMixin,
     # ReportableViewMixin,
@@ -27,7 +28,7 @@ from better_django_tables import models, filters, tables
 logger = logging.getLogger(__name__)
 
 
-class TableView(NextViewMixin, BulkActionViewMixin,
+class TableView(NavigationStorageMixin, NextViewMixin, BulkActionViewMixin,
                 SelectColumnsViewMixin, HtmxTableViewMixin,
                 SingleTableMixin, FilterView):
     """

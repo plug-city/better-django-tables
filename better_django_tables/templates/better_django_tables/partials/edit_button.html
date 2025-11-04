@@ -1,5 +1,14 @@
+{% load django_tables2 %}
+{% if table.nav_token %}
+<a href="{{ record.get_absolute_url }}?nav_token={{ table.nav_token }}&next={{ request.get_full_path|urlencode }}"
+   class="{{ table.edit_button_class|default:'text-primary' }}"
+   title="{{ table.edit_column_title|default:'Edit' }}">
+    <i class="{{ table.edit_icon_class|default:'bi bi-pencil-square' }}"></i>
+</a>
+{% else %}
 <a href="{{ record.get_absolute_url }}?next={{ request.get_full_path|urlencode }}"
    class="{{ table.edit_button_class|default:'text-primary' }}"
    title="{{ table.edit_column_title|default:'Edit' }}">
     <i class="{{ table.edit_icon_class|default:'bi bi-pencil-square' }}"></i>
 </a>
+{% endif %}

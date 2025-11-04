@@ -216,10 +216,14 @@ class EditableTableMixin:
             )
         return super().__new__(cls)
 
-    def __init__(self, *args, is_editable_table=None, **kwargs):
+    def __init__(self, *args, is_editable_table=None, nav_token=None, **kwargs):
         super().__init__(*args, **kwargs)
         if is_editable_table is not None:
             self.is_editable_table = is_editable_table
+        
+        # Store nav_token for use in edit URLs
+        self.nav_token = nav_token
+        
         if not getattr(self, 'is_editable_table', True):
             return  # Skip initialization if not editable
         # Check if the model has get_absolute_url
@@ -387,10 +391,13 @@ class ActionsColumnMixin:
             )
         return super().__new__(cls)
 
-    def __init__(self, *args, has_actions_column=None, **kwargs):
+    def __init__(self, *args, has_actions_column=None, nav_token=None, **kwargs):
         super().__init__(*args, **kwargs)
         if has_actions_column is not None:
             self.has_actions_column = has_actions_column
+
+        # Store nav_token for use in action URL generation
+        self.nav_token = nav_token
 
         if not getattr(self, 'has_actions_column', True):
             return

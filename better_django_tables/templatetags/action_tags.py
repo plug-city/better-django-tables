@@ -7,11 +7,11 @@ register = template.Library()
 @register.simple_tag
 def action_url(action, record):
     """Generate URL for an action based on its configuration."""
-    url_name = action.get('url_name')
+    url_name = action.get("url_name")
     if not url_name:
-        return '#'
+        return "#"
 
-    url_kwargs_func = action.get('url_kwargs')
+    url_kwargs_func = action.get("url_kwargs")
 
     if url_kwargs_func and callable(url_kwargs_func):
         # Use custom kwargs function

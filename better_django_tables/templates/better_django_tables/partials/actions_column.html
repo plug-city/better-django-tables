@@ -10,11 +10,19 @@
                data-item-name="{{ record }}"
                title="{{ action.title }}"></i>
         {% else %}
+            {% if action.name == 'edit' and table.nav_token %}
+            <a href="{% action_url action record %}?nav_token={{ table.nav_token }}"
+               class="{{ action.class }}"
+               title="{{ action.title }}">
+                <i class="{{ action.icon }}"></i>
+            </a>
+            {% else %}
             <a href="{% action_url action record %}"
                class="{{ action.class }}"
                title="{{ action.title }}">
                 <i class="{{ action.icon }}"></i>
             </a>
+            {% endif %}
         {% endif %}
     {% endfor %}
 </div>
