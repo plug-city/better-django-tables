@@ -37,10 +37,10 @@
           <!-- Search Bar -->
           {% include "better_django_tables/filters/searchbar_filter.html" %}
 
-          <!-- Reports Section -->
+          {% comment %} <!-- Reports Section -->
           {% if available_reports is not None and htmx_show_reports %}
             {% include "better_django_tables/reports/reports.html" %}
-          {% endif %}
+          {% endif %} {% endcomment %}
 
           <!-- Create URL -->
           {% if show_new_record %}

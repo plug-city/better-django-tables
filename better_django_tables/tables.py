@@ -16,8 +16,16 @@ from better_django_tables.table_mixins import (
 )
 
 
-class TableMixin(DeletableTableMixin, BulkActionTableMixin, EditableTableMixin, CreateTableMixin,
-            TableNameMixin, BootstrapTableMixin, ActionsColumnMixin, HtmxTableMixin):
+class TableMixin(
+    DeletableTableMixin,
+    BulkActionTableMixin,
+    EditableTableMixin,
+    CreateTableMixin,
+    TableNameMixin,
+    BootstrapTableMixin,
+    ActionsColumnMixin,
+    HtmxTableMixin,
+):
     """
     Base table class with common
     functionality for deletion, bulk actions, and editing.
@@ -43,6 +51,7 @@ class TableMixin(DeletableTableMixin, BulkActionTableMixin, EditableTableMixin, 
     class Meta:
         model = models.ModelName
     """
+
     is_editable_table = True
     is_bulk_action_table = True
     is_deletable_table = True
@@ -150,6 +159,7 @@ class Table(TableMixin, tables.Table):
                 fields = ['name', 'sku', 'price', 'stock']
                 attrs = {"class": "table table-sm table-hover"}
     """
+
     is_editable_table = False
     is_bulk_action_table = False
     is_deletable_table = False
@@ -157,112 +167,109 @@ class Table(TableMixin, tables.Table):
     table_name = "Table"
 
 
-class ReportTable(DeletableTableMixin, BulkActionTableMixin, EditableTableMixin, tables.Table):
-    delete_url_name = 'better_django_tables:report_delete'
+# class ReportTable(DeletableTableMixin, BulkActionTableMixin, EditableTableMixin, tables.Table):
+#     delete_url_name = 'better_django_tables:report_delete'
 
-    name = tables.Column(linkify=True, verbose_name="Report Name")
-    visibility = tables.Column(verbose_name="Visibility")
-    created_by = tables.Column(verbose_name="Created By")
-    view_name = tables.Column(verbose_name="View")
-    allowed_groups = tables.TemplateColumn(
-        template_code="{% for group in record.allowed_groups.all %}<span class='badge bg-secondary me-1'>{{ group.name }}</span>{% endfor %}",
-        orderable=False,
-        verbose_name="Groups",
-        empty_values=(),
-    )
-    filter_count = tables.Column(
-        verbose_name="Filters",
-        empty_values=(),
-        orderable=False
-    )
-    created_at = tables.DateTimeColumn(
-        verbose_name="Created",
-        format='M j, Y g:i A'
-    )
-    is_active = tables.Column(verbose_name="Active")
-    actions = tables.Column(
-        verbose_name='Actions',
-        empty_values=(),
-        orderable=False
-    )
+#     name = tables.Column(linkify=True, verbose_name="Report Name")
+#     visibility = tables.Column(verbose_name="Visibility")
+#     created_by = tables.Column(verbose_name="Created By")
+#     view_name = tables.Column(verbose_name="View")
+#     allowed_groups = tables.TemplateColumn(
+#         template_code="{% for group in record.allowed_groups.all %}<span class='badge bg-secondary me-1'>{{ group.name }}</span>{% endfor %}",
+#         orderable=False,
+#         verbose_name="Groups",
+#         empty_values=(),
+#     )
+#     filter_count = tables.Column(
+#         verbose_name="Filters",
+#         empty_values=(),
+#         orderable=False
+#     )
+#     created_at = tables.DateTimeColumn(
+#         verbose_name="Created",
+#         format='M j, Y g:i A'
+#     )
+#     is_active = tables.Column(verbose_name="Active")
+#     actions = tables.Column(
+#         verbose_name='Actions',
+#         empty_values=(),
+#         orderable=False
+#     )
 
-    class Meta:
-        model = models.Report
-        fields = ("id", "name", "description", "visibility", "created_by", "view_name",
-                 "allowed_groups", "filter_count", "created_at", "is_active", "actions")
-        attrs = {"class": "table table-sm table-hover"}
+#     class Meta:
+#         model = models.Report
+#         fields = ("id", "name", "description", "visibility", "created_by", "view_name",
+#                  "allowed_groups", "filter_count", "created_at", "is_active", "actions")
+#         attrs = {"class": "table table-sm table-hover"}
 
-    def render_visibility(self, value):
-        # Map visibility to Bootstrap badge classes
-        badge_map = {
-            "personal": "bg-info text-dark",
-            "role": "bg-warning text-dark",
-            "global": "bg-success",
-        }
-        badge_class = badge_map.get(value, "bg-light text-dark")
-        return format_html('<span class="badge {}">{}</span>', badge_class, value.title())
+#     def render_visibility(self, value):
+#         # Map visibility to Bootstrap badge classes
+#         badge_map = {
+#             "personal": "bg-info text-dark",
+#             "role": "bg-warning text-dark",
+#             "global": "bg-success",
+#         }
+#         badge_class = badge_map.get(value, "bg-light text-dark")
+#         return format_html('<span class="badge {}">{}</span>', badge_class, value.title())
 
-    def render_view_name(self, value):
-        """Make view name more readable"""
-        if ':' in value:
-            app, view = value.split(':', 1)
-            return view.replace('_', ' ').title()
-        return value.replace('_', ' ').title()
+#     def render_view_name(self, value):
+#         """Make view name more readable"""
+#         if ':' in value:
+#             app, view = value.split(':', 1)
+#             return view.replace('_', ' ').title()
+#         return value.replace('_', ' ').title()
 
-    def render_filter_count(self, record):
-        """Show number of active filters"""
-        if record.filter_params:
-            count = len([v for v in record.filter_params.values() if v])
-            if count > 0:
-                return format_html('<span class="badge bg-primary">{}</span>', count)
-            else:
-                return format_html('<span class="text-muted">0</span>')
-        return format_html('<span class="text-muted">0</span>')
+#     def render_filter_count(self, record):
+#         """Show number of active filters"""
+#         if record.filter_params:
+#             count = len([v for v in record.filter_params.values() if v])
+#             if count > 0:
+#                 return format_html('<span class="badge bg-primary">{}</span>', count)
+#             else:
+#                 return format_html('<span class="text-muted">0</span>')
+#         return format_html('<span class="text-muted">0</span>')
 
-    def render_is_active(self, value):
-        if value:
-            return format_html('<span class="badge bg-success">Active</span>')
-        else:
-            return format_html('<span class="badge bg-secondary">Inactive</span>')
+#     def render_is_active(self, value):
+#         if value:
+#             return format_html('<span class="badge bg-success">Active</span>')
+#         else:
+#             return format_html('<span class="badge bg-secondary">Inactive</span>')
 
-    def render_actions(self, record: models.Report):
-        actions = []
+#     def render_actions(self, record: models.Report):
+#         actions = []
 
-        # Apply/View Report
-        apply_url = record.get_absolute_url()
-        actions.append(f'<a href="{apply_url}" class="btn btn-primary btn-sm me-1" title="Apply Report">Apply</a>')
+#         # Apply/View Report
+#         apply_url = record.get_absolute_url()
+#         actions.append(f'<a href="{apply_url}" class="btn btn-primary btn-sm me-1" title="Apply Report">Apply</a>')
 
-        # Toggle Favorite (if user system exists)
-        if hasattr(record, 'is_favorite') and record.is_favorite:
-            actions.append(
-                f'<form method="post" class="d-inline">'
-                f'<input type="hidden" name="csrfmiddlewaretoken" value="">'  # Will be populated by template
-                f'<input type="hidden" name="report_id" value="{record.id}">'
-                f'<button type="submit" name="toggle_favorite" class="btn btn-warning btn-sm me-1" title="Remove from Favorites">'
-                f'<i class="bi bi-star-fill"></i>'
-                f'</button>'
-                f'</form>'
-            )
-        else:
-            actions.append(
-                f'<form method="post" class="d-inline">'
-                f'<input type="hidden" name="csrfmiddlewaretoken" value="">'  # Will be populated by template
-                f'<input type="hidden" name="report_id" value="{record.id}">'
-                f'<button type="submit" name="toggle_favorite" class="btn btn-outline-warning btn-sm me-1" title="Add to Favorites">'
-                f'<i class="bi bi-star"></i>'
-                f'</button>'
-                f'</form>'
-            )
+#         # Toggle Favorite (if user system exists)
+#         if hasattr(record, 'is_favorite') and record.is_favorite:
+#             actions.append(
+#                 f'<form method="post" class="d-inline">'
+#                 f'<input type="hidden" name="csrfmiddlewaretoken" value="">'  # Will be populated by template
+#                 f'<input type="hidden" name="report_id" value="{record.id}">'
+#                 f'<button type="submit" name="toggle_favorite" class="btn btn-warning btn-sm me-1" title="Remove from Favorites">'
+#                 f'<i class="bi bi-star-fill"></i>'
+#                 f'</button>'
+#                 f'</form>'
+#             )
+#         else:
+#             actions.append(
+#                 f'<form method="post" class="d-inline">'
+#                 f'<input type="hidden" name="csrfmiddlewaretoken" value="">'  # Will be populated by template
+#                 f'<input type="hidden" name="report_id" value="{record.id}">'
+#                 f'<button type="submit" name="toggle_favorite" class="btn btn-outline-warning btn-sm me-1" title="Add to Favorites">'
+#                 f'<i class="bi bi-star"></i>'
+#                 f'</button>'
+#                 f'</form>'
+#             )
 
-        # Edit/Detail link (only for own reports or admin)
-        detail_url = reverse('better_django_tables:report_detail', args=[record.pk])
-        actions.append(f'<a href="{detail_url}" class="btn btn-outline-secondary btn-sm me-1" title="View Details">Details</a>')
+#         # Edit/Detail link (only for own reports or admin)
+#         detail_url = reverse('better_django_tables:report_detail', args=[record.pk])
+#         actions.append(f'<a href="{detail_url}" class="btn btn-outline-secondary btn-sm me-1" title="View Details">Details</a>')
 
-        # Return formatted actions
-        if actions:
-            return format_html('<div class="btn-group btn-group-sm">{}</div>', ''.join(actions))
-        else:
-            return format_html('<span class="text-muted small">No actions</span>')
-
-
-
+#         # Return formatted actions
+#         if actions:
+#             return format_html('<div class="btn-group btn-group-sm">{}</div>', ''.join(actions))
+#         else:
+#             return format_html('<span class="text-muted small">No actions</span>')

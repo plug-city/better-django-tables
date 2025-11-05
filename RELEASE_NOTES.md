@@ -1,5 +1,18 @@
 # Release Notes
 
+## Version 0.11.0 (2025-11-05)
+
+### Changes
+- Removed deprecated reports functionality (models, views, filters, forms)
+- Cleaned up commented-out report-related code across templates
+- Removed NAVIGATION_TOKENS.md documentation file
+- Improved code organization and formatting
+
+### Breaking Changes
+- Report-related functionality has been removed. If you were using the reports feature, please stay on version 0.10.0 or earlier.
+
+---
+
 ## Version 0.10.0 (2025-11-04)
 
 ### New Features

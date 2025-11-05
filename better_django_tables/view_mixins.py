@@ -881,158 +881,158 @@ class BulkActionViewMixin:
         return redirect(self.get_success_url())
 
 
-class ReportableViewMixin:
-    """
-    Mixin to add report saving/loading functionality to FilterViews
-    """
+# class ReportableViewMixin:
+#     """
+#     Mixin to add report saving/loading functionality to FilterViews
+#     """
 
-    show_reports: bool | None = None
-    default_show_reports: bool = True
+#     show_reports: bool | None = None
+#     default_show_reports: bool = True
 
-    def get_context_data(self, **kwargs):
-        # Lazy import to avoid circular imports
-        from better_django_tables import forms
+#     def get_context_data(self, **kwargs):
+#         # Lazy import to avoid circular imports
+#         from better_django_tables import forms
 
-        context = super().get_context_data(**kwargs)
-        context["available_reports"] = self.get_available_reports()
-        context["current_filters"] = self.get_current_filter_params()
-        context["save_report_form"] = forms.ReportSaveForm(
-            initial={
-                "view_name": self.request.resolver_match.view_name,
-                "filter_params": self.get_current_filter_params(),
-            }
-        )
-        context["show_reports"] = self.get_show_reports()
-        return context
+#         context = super().get_context_data(**kwargs)
+#         context["available_reports"] = self.get_available_reports()
+#         context["current_filters"] = self.get_current_filter_params()
+#         context["save_report_form"] = forms.ReportSaveForm(
+#             initial={
+#                 "view_name": self.request.resolver_match.view_name,
+#                 "filter_params": self.get_current_filter_params(),
+#             }
+#         )
+#         context["show_reports"] = self.get_show_reports()
+#         return context
 
-    def get_available_reports(self):
-        """Get reports available to current user for this view"""
-        # Lazy import to avoid circular imports
-        from better_django_tables import models
+#     def get_available_reports(self):
+#         """Get reports available to current user for this view"""
+#         # Lazy import to avoid circular imports
+#         from better_django_tables import models
 
-        view_name = self.request.resolver_match.view_name
-        user = self.request.user
+#         view_name = self.request.resolver_match.view_name
+#         user = self.request.user
 
-        # Build a single query with Q objects instead of combining QuerySets
-        query = Q()
+#         # Build a single query with Q objects instead of combining QuerySets
+#         query = Q()
 
-        # Personal reports
-        query |= Q(
-            view_name=view_name, visibility="personal", created_by=user, is_active=True
-        )
+#         # Personal reports
+#         query |= Q(
+#             view_name=view_name, visibility="personal", created_by=user, is_active=True
+#         )
 
-        # Global reports
-        query |= Q(view_name=view_name, visibility="global", is_active=True)
+#         # Global reports
+#         query |= Q(view_name=view_name, visibility="global", is_active=True)
 
-        # Group-based reports
-        user_groups = user.groups.all()
-        if user_groups.exists():
-            query |= Q(
-                view_name=view_name,
-                visibility="group",  # Change to 'group' if you updated the model
-                allowed_groups__in=user_groups,
-                is_active=True,
-            )
+#         # Group-based reports
+#         user_groups = user.groups.all()
+#         if user_groups.exists():
+#             query |= Q(
+#                 view_name=view_name,
+#                 visibility="group",  # Change to 'group' if you updated the model
+#                 allowed_groups__in=user_groups,
+#                 is_active=True,
+#             )
 
-        # Get all reports in one query
-        all_reports = models.Report.objects.filter(query).distinct().order_by("name")
+#         # Get all reports in one query
+#         all_reports = models.Report.objects.filter(query).distinct().order_by("name")
 
-        # Add favorite status
-        favorite_report_ids = models.ReportFavorite.objects.filter(
-            user=user, report__in=all_reports
-        ).values_list("report_id", flat=True)
+#         # Add favorite status
+#         favorite_report_ids = models.ReportFavorite.objects.filter(
+#             user=user, report__in=all_reports
+#         ).values_list("report_id", flat=True)
 
-        # Convert to list and add is_favorite attribute
-        reports_list = list(all_reports)
-        for report in reports_list:
-            report.is_favorite = report.id in favorite_report_ids
+#         # Convert to list and add is_favorite attribute
+#         reports_list = list(all_reports)
+#         for report in reports_list:
+#             report.is_favorite = report.id in favorite_report_ids
 
-        return reports_list
+#         return reports_list
 
-    def get_current_filter_params(self):
-        """Extract current filter parameters from request"""
-        # Remove pagination and other non-filter params
-        excluded_params = ["page", "per_page", "export", "csrfmiddlewaretoken"]
-        return {
-            key: value
-            for key, value in self.request.GET.items()
-            if key not in excluded_params and value
-        }
+#     def get_current_filter_params(self):
+#         """Extract current filter parameters from request"""
+#         # Remove pagination and other non-filter params
+#         excluded_params = ["page", "per_page", "export", "csrfmiddlewaretoken"]
+#         return {
+#             key: value
+#             for key, value in self.request.GET.items()
+#             if key not in excluded_params and value
+#         }
 
-    def post(self, request, *args, **kwargs):
-        """Handle report saving and other POST actions"""
-        if "save_report" in request.POST:
-            return self.handle_save_report(request)
-        elif "toggle_favorite" in request.POST:
-            return self.handle_toggle_favorite(request)
-        return super().post(request, *args, **kwargs)
+#     def post(self, request, *args, **kwargs):
+#         """Handle report saving and other POST actions"""
+#         if "save_report" in request.POST:
+#             return self.handle_save_report(request)
+#         elif "toggle_favorite" in request.POST:
+#             return self.handle_toggle_favorite(request)
+#         return super().post(request, *args, **kwargs)
 
-    def handle_save_report(self, request):
-        """Save a new report"""
-        # Lazy import to avoid circular imports
-        from better_django_tables import forms
+#     def handle_save_report(self, request):
+#         """Save a new report"""
+#         # Lazy import to avoid circular imports
+#         from better_django_tables import forms
 
-        form = forms.ReportSaveForm(request.POST)
-        if form.is_valid():
-            report = form.save(commit=False)
-            report.created_by = request.user
-            report.save()
+#         form = forms.ReportSaveForm(request.POST)
+#         if form.is_valid():
+#             report = form.save(commit=False)
+#             report.created_by = request.user
+#             report.save()
 
-            # Handle group assignments for group-based reports
-            if report.visibility == "group":
-                groups = form.cleaned_data.get("allowed_groups", [])
-                report.allowed_groups.set(groups)
+#             # Handle group assignments for group-based reports
+#             if report.visibility == "group":
+#                 groups = form.cleaned_data.get("allowed_groups", [])
+#                 report.allowed_groups.set(groups)
 
-            messages.success(request, f'Report "{report.name}" saved successfully.')
-        else:
-            messages.error(request, "Error saving report. Please check the form.")
+#             messages.success(request, f'Report "{report.name}" saved successfully.')
+#         else:
+#             messages.error(request, "Error saving report. Please check the form.")
 
-        return redirect(request.path)
+#         return redirect(request.path)
 
-    def handle_toggle_favorite(self, request):
-        """Toggle favorite status for a report"""
-        # Lazy import to avoid circular imports
-        from better_django_tables import models
+#     def handle_toggle_favorite(self, request):
+#         """Toggle favorite status for a report"""
+#         # Lazy import to avoid circular imports
+#         from better_django_tables import models
 
-        report_id = request.POST.get("report_id")
-        try:
-            report = models.Report.objects.get(id=report_id)
-            favorite, created = models.ReportFavorite.objects.get_or_create(
-                user=request.user, report=report
-            )
-            if not created:
-                favorite.delete()
-                messages.success(request, f'Removed "{report.name}" from favorites.')
-            else:
-                messages.success(request, f'Added "{report.name}" to favorites.')
-        except models.Report.DoesNotExist:
-            messages.error(request, "Report not found.")
+#         report_id = request.POST.get("report_id")
+#         try:
+#             report = models.Report.objects.get(id=report_id)
+#             favorite, created = models.ReportFavorite.objects.get_or_create(
+#                 user=request.user, report=report
+#             )
+#             if not created:
+#                 favorite.delete()
+#                 messages.success(request, f'Removed "{report.name}" from favorites.')
+#             else:
+#                 messages.success(request, f'Added "{report.name}" to favorites.')
+#         except models.Report.DoesNotExist:
+#             messages.error(request, "Report not found.")
 
-        return redirect(request.path)
+#         return redirect(request.path)
 
-    def get_show_reports(self, value: bool | None = None) -> bool:
-        """
-        Determines if the reports section should be shown.
+#     def get_show_reports(self, value: bool | None = None) -> bool:
+#         """
+#         Determines if the reports section should be shown.
 
-        Priority order:
-        1. 'show_reports' query parameter (e.g., ?show_reports=true)
-        2. value method argument if provided
-        2. View's show_reports attribute if it exists
-        3. Default to True
+#         Priority order:
+#         1. 'show_reports' query parameter (e.g., ?show_reports=true)
+#         2. value method argument if provided
+#         2. View's show_reports attribute if it exists
+#         3. Default to True
 
-        Returns: bool: True if the reports section should be shown, False otherwise.
-        """
-        show_param = self.request.GET.get("show_reports")
-        if show_param is not None:
-            return show_param.lower() in ["1", "true", "yes"]
+#         Returns: bool: True if the reports section should be shown, False otherwise.
+#         """
+#         show_param = self.request.GET.get("show_reports")
+#         if show_param is not None:
+#             return show_param.lower() in ["1", "true", "yes"]
 
-        if value is not None:
-            return value
+#         if value is not None:
+#             return value
 
-        if hasattr(self, "show_reports") and self.show_reports is not None:
-            return self.show_reports
+#         if hasattr(self, "show_reports") and self.show_reports is not None:
+#             return self.show_reports
 
-        return self.default_show_reports
+#         return self.default_show_reports
 
 
 class BetterMultiTableMixin(TableMixinBase):
@@ -1858,7 +1858,7 @@ class HtmxTableViewMixin(
     ShowCreateButtonMixin,
     PerPageViewMixin,
     ShowTableNameViewMixin,
-    ReportableViewMixin,
+    # ReportableViewMixin,
     StreamExportMixin,
     TemplateResponseMixin,
 ):
