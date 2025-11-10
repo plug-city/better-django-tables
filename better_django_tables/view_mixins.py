@@ -1198,7 +1198,6 @@ class SelectColumnsViewMixin:
             exclude = kwargs.get("exclude", [])
             exclude.extend(exclude_columns)
             kwargs["exclude"] = exclude
-
         return kwargs
 
     def get_exclude_columns(self):

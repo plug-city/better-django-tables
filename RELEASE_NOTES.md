@@ -1,5 +1,17 @@
 # Release Notes
 
+## Version 0.11.1 (2025-11-10)
+
+### Bug Fixes
+- Fixed filter button positioning in sidebar filter template
+- Improved template formatting and code organization
+
+### Improvements
+- Added filter submit button at the top of the sidebar for better UX
+- Cleaned up whitespace formatting in view_mixins.py
+
+---
+
 ## Version 0.11.0 (2025-11-05)
 
 ### Changes

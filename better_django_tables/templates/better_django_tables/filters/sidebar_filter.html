@@ -1,12 +1,12 @@
 {% if filter %}
 <!-- Toggle button for sidebar (only shown on small screens) -->
   <div class="mb-2">
-    <button 
-      class="btn btn-outline-secondary btn-sm" 
-      type="button" 
-      data-bs-toggle="collapse" 
-      data-bs-target="#filterSidebar" 
-      aria-expanded="{% if toggle_filter %}true{% else %}false{% endif %}" 
+    <button
+      class="btn btn-outline-secondary btn-sm"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#filterSidebar"
+      aria-expanded="{% if toggle_filter %}true{% else %}false{% endif %}"
       aria-controls="filterSidebar"
       hx-post="{{ request.path }}"
       hx-vals='{"toggle_filter": "true"}'
@@ -19,49 +19,52 @@
   <nav id="filterSidebar" class="col-md-3 col-lg-2 bg-light sidebar collapse {% if toggle_filter %}show{% endif %} p-3 mb-3 mb-md-0">
     <div class="position-sticky pt-3">
       <form action="" method="get" class="form">
-      <h5>Filters</h5>
-      {% for field in filter.form.visible_fields %}
-        {% if field.name != 'search' %}
-        <div class="mb-3">
-          {% if field.field.widget.input_type == 'checkbox' and field|length > 1 %}
-            <!-- Handle CheckboxSelectMultiple widgets -->
-            <label class="form-label">{{ field.label }}</label>
-            <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
-              {% for choice in field %}
-                <div class="form-check">
-                  {{ choice.tag }}
-                  <label class="form-check-label" for="{{ choice.id_for_label }}">
-                    {{ choice.choice_label }}
-                  </label>
-                </div>
-              {% endfor %}
-            </div>
-          {% elif field.field.widget.input_type == 'checkbox' %}
-            <!-- Handle single checkbox (BooleanField) -->
-            <div class="form-check">
-              {{ field }}
-              <label class="form-check-label" for="{{ field.id_for_label }}">
-                {{ field.label }}
-              </label>
-            </div>
-          {% else %}
-            <!-- Handle all other field types -->
-            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-            <div class="w-100">
-              {{ field }}
-            </div>
-          {% endif %}
+        <div class="d-flex justify-content-between align-items-center">
+          <h5>Filters</h5>
+          <button type="submit" class="btn btn-primary btn-sm mt-2">Filter</button>
         </div>
+        {% for field in filter.form.visible_fields %}
+          {% if field.name != 'search' %}
+          <div class="mb-3">
+            {% if field.field.widget.input_type == 'checkbox' and field|length > 1 %}
+              <!-- Handle CheckboxSelectMultiple widgets -->
+              <label class="form-label">{{ field.label }}</label>
+              <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                {% for choice in field %}
+                  <div class="form-check">
+                    {{ choice.tag }}
+                    <label class="form-check-label" for="{{ choice.id_for_label }}">
+                      {{ choice.choice_label }}
+                    </label>
+                  </div>
+                {% endfor %}
+              </div>
+            {% elif field.field.widget.input_type == 'checkbox' %}
+              <!-- Handle single checkbox (BooleanField) -->
+              <div class="form-check">
+                {{ field }}
+                <label class="form-check-label" for="{{ field.id_for_label }}">
+                  {{ field.label }}
+                </label>
+              </div>
+            {% else %}
+              <!-- Handle all other field types -->
+              <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+              <div class="w-100">
+                {{ field }}
+              </div>
+            {% endif %}
+          </div>
+          {% endif %}
+        {% endfor %}
+        <button type="submit" class="btn btn-primary btn-sm mt-2">Filter</button>
+        {% for field in filter.form.hidden_fields %}
+            {{ field }}
+        {% endfor %}
+        {# Also keep the search value as a hidden field #}
+        {% if filter.form.search.value %}
+            <input type="hidden" name="search" value="{{ filter.form.search.value }}">
         {% endif %}
-      {% endfor %}
-      <button type="submit" class="btn btn-primary btn-sm mt-2">Filter</button>
-      {% for field in filter.form.hidden_fields %}
-          {{ field }}
-      {% endfor %}
-      {# Also keep the search value as a hidden field #}
-      {% if filter.form.search.value %}
-          <input type="hidden" name="search" value="{{ filter.form.search.value }}">
-      {% endif %}
       </form>
     </div>
   </nav>
