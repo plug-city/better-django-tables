@@ -1,5 +1,14 @@
 # Release Notes
 
+## Version 0.11.2 (2025-11-11)
+
+### Improvements
+- Enhanced HTMX support for template views
+- Added `HtmxTemplateView` for better HTMX integration patterns
+- Improved template response handling for partial page loads
+
+---
+
 ## Version 0.11.1 (2025-11-10)
 
 ### Bug Fixes

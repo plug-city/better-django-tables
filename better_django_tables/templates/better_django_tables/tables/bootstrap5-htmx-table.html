@@ -31,7 +31,7 @@
 
 
 {% block pagination %}
-    {% if table.page and table.paginator.num_pages > 1 %}
+    {% if table.page and table.paginator.num_pages > 1 and table.show_pagination %}
         <nav aria-label="Table navigation">
             <ul class="pagination justify-content-center">
             {% if table.page.has_previous %}

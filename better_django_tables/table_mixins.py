@@ -1,7 +1,9 @@
 import collections
 
 from django.core.exceptions import ImproperlyConfigured
+from django.template.loader import render_to_string
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 import django_tables2 as tables
 
 
@@ -220,10 +222,10 @@ class EditableTableMixin:
         super().__init__(*args, **kwargs)
         if is_editable_table is not None:
             self.is_editable_table = is_editable_table
-        
+
         # Store nav_token for use in edit URLs
         self.nav_token = nav_token
-        
+
         if not getattr(self, 'is_editable_table', True):
             return  # Skip initialization if not editable
         # Check if the model has get_absolute_url
@@ -378,8 +380,7 @@ class ActionsColumnMixin:
             return super().__new__(cls)
 
         if 'bdtactions' not in cls.base_columns:
-            cls.base_columns['bdtactions'] = tables.TemplateColumn(
-                template_name=cls.actions_template_name,
+            cls.base_columns['bdtactions'] = tables.Column(
                 orderable=False,
                 verbose_name=cls.actions_column_verbose_name,
                 empty_values=(),
@@ -416,6 +417,7 @@ class ActionsColumnMixin:
     def _get_enabled_actions(self):
         """Return a list of enabled actions with their configuration."""
         actions = []
+        # actions = getattr(self, 'actions', [])
 
         # Standard Actions Configuration
         actions = self._add_standard_actions(actions)
@@ -427,11 +429,11 @@ class ActionsColumnMixin:
                 action = self._normalize_action_config(action_config)
                 if action:
                     actions.append(action)
-
         return actions
 
     def _add_standard_actions(self, actions: list[dict]) -> list[dict]:
         """Add standard actions to the actions list."""
+
         if self.enable_view_action:
             # Create a copy to avoid modifying the class-level dictionary
             view_action = self.view_action.copy()
@@ -444,6 +446,7 @@ class ActionsColumnMixin:
                               'url_name' or 'view_action_url_name' to be defined."
                     ) from exc
             actions.append(self._normalize_action_config(view_action))
+
         if self.enable_edit_action:
             # Create a copy to avoid modifying the class-level dictionary
             edit_action = self.edit_action.copy()
@@ -456,6 +459,7 @@ class ActionsColumnMixin:
                               'url_name' or 'edit_action_url_name' to be defined."
                     ) from exc
             actions.append(self._normalize_action_config(edit_action))
+
         if self.enable_delete_action:
             # Create a copy to avoid modifying the class-level dictionary
             delete_action = self.delete_action.copy()
@@ -488,9 +492,31 @@ class ActionsColumnMixin:
             if action['requires_modal']:
                 action['modal_target'] = config['modal_target']
                 action['modal_toggle'] = config['modal_toggle']
+        except KeyError as exc:
+            raise ImproperlyConfigured(
+                f'{self.__class__.__name__} action configuration is missing required field: {exc}'
+            ) from exc
         except Exception as exc:
-            raise ImproperlyConfigured(f'{self.__class__.__name__} is improperly configured') from exc
+            raise ImproperlyConfigured(
+                f'{self.__class__.__name__} is improperly configured: {exc}'
+            ) from exc
         return action
+
+    def render_bdtactions(self, record):
+        """Render the actions column with all enabled action buttons using the template."""
+        if not hasattr(self, 'enabled_actions') or not self.enabled_actions:
+            return ''
+
+        # Prepare the context with the table, record, and enabled_actions
+        context = {
+            'table': self,
+            'record': record,
+            'enabled_actions': self.enabled_actions,
+        }
+
+        # Render the template with the context
+        html = render_to_string(self.actions_template_name, context)
+        return mark_safe(html)
 
     # def _get_legacy_actions(self):
     #     """Get actions using the legacy approach for backward compatibility."""
@@ -606,3 +632,14 @@ class HtmxTableMixin:
     def get_htmx_template_name(self):
         return self.htmx_template_name
 
+
+class ShowPaginationTableMixin:
+    """
+    Mixin to control the display of pagination controls.
+    """
+
+    show_pagination: bool = True  # Default to showing pagination in HTMX views
+
+    def __init__(self, *args, **kwargs):
+        self.show_pagination = kwargs.pop('show_pagination', True)
+        super().__init__(*args, **kwargs)

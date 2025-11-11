@@ -1,6 +1,6 @@
 {% load django_tables2 action_tags %}
 <div class="action-buttons d-flex gap-2 justify-content-center">
-    {% for action in table.enabled_actions %}
+    {% for action in enabled_actions %}
         {% if action.requires_modal %}
             <i class="{{ action.icon }} {{ action.class }}"
                style="cursor: pointer;"

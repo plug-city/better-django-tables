@@ -1404,6 +1404,47 @@ class PerPageViewMixin:
         return context
 
 
+class ShowPaginationViewMixin:
+    """
+    Mixin to control the display of pagination controls in table views.
+
+    Attributes:
+        show_pagination (bool): Whether to show pagination controls. Default: True
+
+    Usage:
+        class MyTableView(ShowPaginationViewMixin, SingleTableMixin, FilterView):
+            model = MyModel
+            table_class = MyTable
+            show_pagination = True  # or False to hide
+    """
+
+    show_pagination: bool = True
+
+    def get_show_pagination(self, value: bool | None = None) -> bool:
+        """
+        Determines if the pagination controls should be shown.
+
+        Priority order:
+        1. 'show_pagination' query parameter (e.g., ?show_pagination=true)
+        2. method argument 'value' if provided
+        3. View's show_pagination attribute
+
+        Returns: bool: True if the pagination should be shown, False otherwise.
+        """
+        show_param = self.request.GET.get("show_pagination")
+        if show_param is not None:
+            return show_param.lower() in ["1", "true", "yes"]
+        if value is not None:
+            return value
+        return self.show_pagination
+
+    def get_table_kwargs(self):
+        kwargs = super().get_table_kwargs()
+        if 'show_pagination' not in kwargs:
+            kwargs['show_pagination'] = self.get_show_pagination()
+        return kwargs
+
+
 class ShowFilterMixin:
     """
     Mixin to control the display of the filter sidebar in table views.
@@ -1856,6 +1897,7 @@ class HtmxTableViewMixin(
     SearchbarMixin,
     ShowCreateButtonMixin,
     PerPageViewMixin,
+    ShowPaginationViewMixin,
     ShowTableNameViewMixin,
     # ReportableViewMixin,
     StreamExportMixin,
@@ -1874,6 +1916,7 @@ class HtmxTableViewMixin(
     - Search bar
     - Create button
     - Per-page selector
+    - Pagination controls
     - Table name display
     - Report saving/loading
     - CSV export
@@ -1918,6 +1961,7 @@ class HtmxTableViewMixin(
     htmx_show_search_bar = False
     htmx_show_create_button = False
     htmx_show_per_page_selector = True
+    htmx_show_pagination = True
     htmx_show_table_name = False
     htmx_show_export_button = False
 
@@ -1944,9 +1988,9 @@ class HtmxTableViewMixin(
         """
         context = super().get_context_data(**kwargs)
         context["is_htmx"] = hasattr(self.request, "htmx") and self.request.htmx
-        context["htmx_show_reports"] = self.htmx_show_reports
-        context["htmx_show_per_page"] = self.htmx_show_per_page
-        context["htmx_show_filter_badges"] = self.htmx_show_filter_badges
+        # context["htmx_show_reports"] = self.htmx_show_reports
+        # context["htmx_show_per_page"] = self.htmx_show_per_page
+        # context["htmx_show_filter_badges"] = self.htmx_show_filter_badges
         return context
 
     def get_show_filter(self, value: bool | None = None) -> bool:
@@ -2034,3 +2078,9 @@ class HtmxTableViewMixin(
 
         # Fall back to parent implementation for non-HTMX requests
         return super().get_per_page_session_key()
+
+    def get_show_pagination(self, value: bool | None = None) -> bool:
+        """Apply HTMX-specific setting for pagination controls."""
+        if self.request.htmx:
+            return super().get_show_pagination(self.htmx_show_pagination)
+        return super().get_show_pagination(value)

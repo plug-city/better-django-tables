@@ -143,37 +143,37 @@ class TableView(
 #         return models.Report.objects.filter(created_by=user)
 
 
-class HtmxTableView(NextViewMixin, BulkActionViewMixin, SingleTableMixin, FilterView):
-    """
-    HTMX-enabled table view for dynamic updates.
-    Inherits from NextViewMixin, BulkActionViewMixin, SingleTableMixin, and FilterView.
-    """
+# class HtmxTableView(NextViewMixin, BulkActionViewMixin, SingleTableMixin, FilterView):
+#     """
+#     HTMX-enabled table view for dynamic updates.
+#     Inherits from NextViewMixin, BulkActionViewMixin, SingleTableMixin, and FilterView.
+#     """
 
-    template_name = "better_django_tables/tables/htmx_table_view.html"
-    show_new_record = False
-    show_table_name = True
-    table_pagination = False
+#     template_name = "better_django_tables/tables/htmx_table_view.html"
+#     show_new_record = False
+#     show_table_name = True
+#     table_pagination = False
 
-    def get(self, request, *args, **kwargs):
-        try:
-            return super().get(request, *args, **kwargs)
-        except Exception as e:
-            return render(
-                request,
-                "better_django_tables/partials/error_htmx_table.html",
-                {"error": str(e)},
-                status=500,
-            )
+#     def get(self, request, *args, **kwargs):
+#         try:
+#             return super().get(request, *args, **kwargs)
+#         except Exception as e:
+#             return render(
+#                 request,
+#                 "better_django_tables/partials/error_htmx_table.html",
+#                 {"error": str(e)},
+#                 status=500,
+#             )
 
-    # def post(self, request, *args, **kwargs):
-    #     # Handle bulk actions
-    #     return self.handle_bulk_action(request)
+#     # def post(self, request, *args, **kwargs):
+#     #     # Handle bulk actions
+#     #     return self.handle_bulk_action(request)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["show_new_record"] = self.show_new_record
-        context["show_table_name"] = self.show_table_name
-        return context
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context["show_new_record"] = self.show_new_record
+#         context["show_table_name"] = self.show_table_name
+#         return context
 
 
 class RenderRowMixin:

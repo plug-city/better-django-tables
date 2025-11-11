@@ -13,6 +13,7 @@ from better_django_tables.table_mixins import (
     BootstrapTableMixin,
     ActionsColumnMixin,
     HtmxTableMixin,
+    ShowPaginationTableMixin,
 )
 
 
@@ -25,6 +26,7 @@ class TableMixin(
     BootstrapTableMixin,
     ActionsColumnMixin,
     HtmxTableMixin,
+    ShowPaginationTableMixin,
 ):
     """
     Base table class with common
