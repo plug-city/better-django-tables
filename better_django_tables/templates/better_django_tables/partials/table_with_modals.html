@@ -2,13 +2,3 @@
 {% load delete_modal %}
 
 {% render_table table %}
-{% comment %} {% render_delete_modal table %} {% endcomment %}
-
-{% comment %} {% if delete_url_name and table.data %}
-  {% for record in table.data %}
-    {% url delete_url_name record.pk as delete_url %}
-    {% with modal_id=table_name|add:'-'|add:record.pk|stringformat:'s' %}
-      {% include "daapp/partials/generic_delete_modal.html" with id=modal_id object_label=object_label object=record delete_url=delete_url %}
-    {% endwith %}
-  {% endfor %}
-{% endif %} {% endcomment %}

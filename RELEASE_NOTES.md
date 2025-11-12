@@ -1,5 +1,30 @@
 # Release Notes
 
+## Version 0.12.0 (2025-12-30)
+
+### Changes
+- Removed deprecated filters, forms, and models modules
+- Removed deprecated `table_tags` templatetag module
+- Added new `http.py` module with typed `HttpRequest` class for better HTMX support
+- Cleaned up and modernized template structure
+- Improved code organization and reduced technical debt
+
+### Breaking Changes
+- `filters.py`, `forms.py`, and `models.py` modules have been removed
+- `table_tags` templatetag has been removed - use `better_django_tables` templatetag instead
+- If you were using these deprecated modules, please stay on version 0.11.3 or earlier
+
+---
+
+## Version 0.11.3 (2025-11-11)
+
+### Improvements
+- Optimized navigation PK storage to respect `navigation_max_pk_count` limit during queryset evaluation
+- Improved database query efficiency for navigation storage by limiting PKs fetched from database
+- Added debug logging for navigation PK count tracking
+
+---
+
 ## Version 0.11.2 (2025-11-11)
 
 ### Improvements

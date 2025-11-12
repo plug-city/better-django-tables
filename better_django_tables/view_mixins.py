@@ -5,6 +5,7 @@ import json
 import time
 from urllib.parse import urlparse
 import uuid
+from typing import Callable
 
 from itertools import count
 
@@ -18,10 +19,12 @@ from django.urls import resolve
 from django.http import HttpResponse
 from django.urls import reverse
 
+
 from django_tables2.views import TableMixinBase
 from django_tables2 import RequestConfig
 
-from better_django_tables import conf
+from . import conf
+from .http import HttpRequest
 
 
 logger = logging.getLogger(__name__)
@@ -31,6 +34,8 @@ class NextViewMixin:
     """
     Base mixin for views that provides standard functions for all views.
     """
+
+    request: HttpRequest
 
     def get_success_url(self):
         next_url = self.request.POST.get("next") or self.request.GET.get("next")
@@ -76,6 +81,8 @@ class SaveAndNextMixin:
     navigation_enabled = True
     navigation_context_window = None  # Will use setting default if None
     navigation_form_id = None  # Optional form ID for the save buttons
+
+    request: HttpRequest
 
     def get_navigation_max_pk_count(self):
         """Get the maximum number of PKs to store in session."""
@@ -361,6 +368,8 @@ class NavigationStorageMixin:
     navigation_context_window = None
     navigation_token_length = 16  # UUID substring length
 
+    request: HttpRequest
+
     def get_navigation_max_pk_count(self):
         """Get the maximum number of PKs to store in session."""
         if self.navigation_max_pk_count is not None:
@@ -574,7 +583,15 @@ class NavigationStorageMixin:
             # Generate or retrieve navigation token
             nav_token = self.get_or_create_navigation_token()
 
-            pks = list(self.object_list.values_list("pk", flat=True))
+            max_pk_count = self.get_navigation_max_pk_count()
+
+            # Limit query to only fetch max_pk_count PKs from database
+            if max_pk_count and max_pk_count > 0:
+                pks = list(self.object_list.values_list("pk", flat=True)[:max_pk_count])
+            else:
+                pks = list(self.object_list.values_list("pk", flat=True))
+
+            print(f"Storing {len(pks)} PKs for navigation with token {nav_token}")
 
             # Store in session with token
             self.store_navigation_pks(pks, nav_token)
@@ -587,6 +604,8 @@ class ActiveFilterMixin:
 
     show_filter_badges: bool | None = None
     default_show_filter_badges = True
+
+    request: HttpRequest
 
     def get_active_filters(self, filter_instance):
         """Extract active filters from a django-filter instance, including date ranges"""
@@ -761,6 +780,32 @@ class BulkActionViewMixin:
 
     delete_method = None  # Set this to the method that handles deletion
     bulk_delete_hx_trigger = "bulkDeleteComplete"  # Default HX-Trigger event
+    standard_actions = [  # Only override if you want to remove/change a standard action
+        {
+            "name": "delete",
+            "method_name": "bulk_delete",
+            "htmx_triggers": [
+                "bulkDeleteComplete",
+            ],
+            "use_model_htmx_trigger": True,  # default True
+        },
+    ]
+    extra_bulk_actions = []  # List of additional bulk actions
+
+    request: HttpRequest
+    bulk_actions: dict[str, dict]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.bulk_actions = {}
+        actions_list = self.standard_actions + self.extra_bulk_actions
+        for action in actions_list:
+            if action["name"] in self.bulk_actions:
+                raise ImproperlyConfigured(
+                    f"Duplicate bulk action name: {action['name']}"
+                )
+            action["method"] = self.get_bulk_action_method(action)
+            self.bulk_actions[action["name"]] = action
 
     def get_bulk_delete_hx_trigger(self):
         """
@@ -779,7 +824,9 @@ class BulkActionViewMixin:
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["redirect_url"] = self.request.GET.get("next", self.request.path)
+        context["bulk_action_redirect_url"] = self.request.GET.get(
+            "next", self.request.path
+        )
         return context
 
     def post(self, request, *args, **kwargs):
@@ -789,26 +836,44 @@ class BulkActionViewMixin:
         """
         if "bulk_action" in request.POST:
             logger.info("Handling bulk action POST request")
-            return self.handle_bulk_action(request)
+            return self.handle_bulk_action()
         logger.debug("No bulk action found in POST, passing to super()")
         return super().post(request, *args, **kwargs)
 
-    def handle_bulk_action(self, request):
+    def handle_bulk_action(self):
         """Handle bulk action POST requests."""
-        selected_items = request.POST.getlist("selected_items")
+        selected_items = self.request.POST.getlist("selected_items")
         if not selected_items:
-            messages.error(request, "No items were selected.")
-            return self.get(request)
-        # Handle bulk delete
-        if "selected_items" in request.POST:
-            return self.handle_bulk_delete(request, selected_items)
+            messages.error(self.request, "No items were selected.")
+            return self.get(self.request)
+        action_name = self.request.POST.get("bulk_action")
+        try:
+            action = self.get_bulk_action(action_name)
+        except ValueError as exc:
+            return HttpResponse(str(exc), status=400)
+        action_method = action["method"]
+        return action_method(selected_items, action)
 
-        return self.get(request)
+    def get_bulk_action(self, action_name: str) -> dict:
+        """Get the bulk action name from the request."""
+        try:
+            action = self.bulk_actions[action_name]
+        except KeyError as exc:
+            raise ValueError(f"Unknown bulk action: {action_name}") from exc
+        return action
 
-    def handle_bulk_delete(self, request, selected_items):
-        """Handle bulk delete action."""
-        if self.delete_method:
-            return self._delete_with_custom_method(request, selected_items)
+    def get_bulk_action_method(self, action: dict) -> Callable:
+        """Get the method corresponding to the bulk action name."""
+        try:
+            method = getattr(self, action["method_name"])
+        except AttributeError as exc:
+            raise ImproperlyConfigured(
+                f"Bulk action method '{action['method_name']}' not implemented."
+            ) from exc
+        return method
+
+    def bulk_delete(self, selected_items: list, action: dict, *_, **__):
+        """Bulk delete action handler."""
         try:
             # Get the model from the view
             model = getattr(self, "model", None)
@@ -818,221 +883,109 @@ class BulkActionViewMixin:
             deleted_count, _ = model.objects.filter(pk__in=selected_items).delete()
             if deleted_count > 0:
                 messages.warning(
-                    request,
+                    self.request,  # type: ignore
                     f"Successfully deleted {deleted_count} {model._meta.verbose_name}(s).",
                 )
             else:
-                messages.warning(request, "No items were deleted.")
+                messages.warning(self.request, "No items were deleted.")
         except Exception as e:
-            messages.error(request, f"Error deleting items: {str(e)}")
+            messages.error(self.request, f"Error deleting items: {str(e)}")
 
-        # For HTMX requests, return the updated table view
-        if request.htmx:
-            response = self.get(request)
-            # hx_trigger = self.get_bulk_delete_hx_trigger()
-            response["HX-Trigger"] = self.get_bulk_delete_hx_trigger()
-            # Handle both string and dict trigger values
-            # if isinstance(hx_trigger, dict):
-            #     response['HX-Trigger'] = json.dumps(hx_trigger)
-            # else:
-            #     response['HX-Trigger'] = hx_trigger
+        return self.get_bulk_success_response(action)
+
+    def get_bulk_success_response(self, action: dict):
+        """Get the success response for a bulk action."""
+        if self.request.htmx:
+            response = self.get(self.request)
+            response["HX-Trigger"] = self.get_bulk_htmx_triggers(action)
             return response
-
-        # Redirect to the same page to prevent re-submission
         return redirect(self.get_success_url())
 
-    def _delete_with_custom_method(self, request, selected_items):
-        """Handle bulk delete action."""
+    def get_bulk_htmx_triggers(self, action: dict) -> str:
+        """Get the HX-Trigger value for a bulk action."""
+        htmx_triggers = []
+        if action.get("use_model_htmx_trigger", True):
+            model_htmx_trigger = getattr(self.model, "htmx_trigger", None)  # type: ignore
+            if model_htmx_trigger:
+                htmx_triggers.append(model_htmx_trigger)
+        if "htmx_triggers" in action:
+            htmx_triggers.extend(action["htmx_triggers"])
+        return json.dumps(htmx_triggers) if len(htmx_triggers) > 1 else htmx_triggers[0]
 
-        try:
-            # Get the model from the view
-            model = getattr(self, "model", None)
-            if not model:
-                raise ValueError("Model not specified")
-            # Delete selected items
-            deleted_count = 0
-            for object in model.objects.filter(pk__in=selected_items):
-                self.delete_method(object)
-                deleted_count += 1
-            # deleted_count, _ = model.objects.filter(pk__in=selected_items).delete()
-            if deleted_count > 0:
-                messages.warning(
-                    request,
-                    f"Successfully deleted {deleted_count} {model._meta.verbose_name}(s).",
-                )
-            else:
-                messages.warning(request, "No items were deleted.")
-        except Exception as e:
-            logger.exception("Error during bulk delete: %s", e)
-            messages.error(request, f"Error deleting items: {str(e)}")
+    # def handle_bulk_delete(self, request, selected_items):
+    #     """Handle bulk delete action."""
+    #     if self.delete_method:
+    #         return self._delete_with_custom_method(request, selected_items)
+    #     try:
+    #         # Get the model from the view
+    #         model = getattr(self, "model", None)
+    #         if not model:
+    #             raise ValueError("Model not specified")
+    #         # Delete selected items
+    #         deleted_count, _ = model.objects.filter(pk__in=selected_items).delete()
+    #         if deleted_count > 0:
+    #             messages.warning(
+    #                 request,
+    #                 f"Successfully deleted {deleted_count} {model._meta.verbose_name}(s).",
+    #             )
+    #         else:
+    #             messages.warning(request, "No items were deleted.")
+    #     except Exception as e:
+    #         messages.error(request, f"Error deleting items: {str(e)}")
 
-        # For HTMX requests, return the updated table view
-        if request.htmx:
-            response = self.get(request)
-            hx_trigger = self.get_bulk_delete_hx_trigger()
-            # Handle both string and dict trigger values
-            if isinstance(hx_trigger, dict):
-                response["HX-Trigger"] = json.dumps(hx_trigger)
-            else:
-                response["HX-Trigger"] = hx_trigger
-            return response
+    #     # For HTMX requests, return the updated table view
+    #     if request.htmx:
+    #         response = self.get(request)
+    #         # hx_trigger = self.get_bulk_delete_hx_trigger()
+    #         response["HX-Trigger"] = self.get_bulk_delete_hx_trigger()
+    #         # Handle both string and dict trigger values
+    #         # if isinstance(hx_trigger, dict):
+    #         #     response['HX-Trigger'] = json.dumps(hx_trigger)
+    #         # else:
+    #         #     response['HX-Trigger'] = hx_trigger
+    #         return response
 
-        # Redirect to the same page to prevent re-submission
-        return redirect(self.get_success_url())
+    #     # Redirect to the same page to prevent re-submission
+    #     return redirect(self.get_success_url())
 
+    # def _delete_with_custom_method(self, request, selected_items):
+    #     """Handle bulk delete action."""
 
-# class ReportableViewMixin:
-#     """
-#     Mixin to add report saving/loading functionality to FilterViews
-#     """
+    #     try:
+    #         # Get the model from the view
+    #         model = getattr(self, "model", None)
+    #         if not model:
+    #             raise ValueError("Model not specified")
+    #         # Delete selected items
+    #         deleted_count = 0
+    #         for object in model.objects.filter(pk__in=selected_items):
+    #             self.delete_method(object)
+    #             deleted_count += 1
+    #         # deleted_count, _ = model.objects.filter(pk__in=selected_items).delete()
+    #         if deleted_count > 0:
+    #             messages.warning(
+    #                 request,
+    #                 f"Successfully deleted {deleted_count} {model._meta.verbose_name}(s).",
+    #             )
+    #         else:
+    #             messages.warning(request, "No items were deleted.")
+    #     except Exception as e:
+    #         logger.exception("Error during bulk delete: %s", e)
+    #         messages.error(request, f"Error deleting items: {str(e)}")
 
-#     show_reports: bool | None = None
-#     default_show_reports: bool = True
+    #     # For HTMX requests, return the updated table view
+    #     if request.htmx:
+    #         response = self.get(request)
+    #         hx_trigger = self.get_bulk_delete_hx_trigger()
+    #         # Handle both string and dict trigger values
+    #         if isinstance(hx_trigger, dict):
+    #             response["HX-Trigger"] = json.dumps(hx_trigger)
+    #         else:
+    #             response["HX-Trigger"] = hx_trigger
+    #         return response
 
-#     def get_context_data(self, **kwargs):
-#         # Lazy import to avoid circular imports
-#         from better_django_tables import forms
-
-#         context = super().get_context_data(**kwargs)
-#         context["available_reports"] = self.get_available_reports()
-#         context["current_filters"] = self.get_current_filter_params()
-#         context["save_report_form"] = forms.ReportSaveForm(
-#             initial={
-#                 "view_name": self.request.resolver_match.view_name,
-#                 "filter_params": self.get_current_filter_params(),
-#             }
-#         )
-#         context["show_reports"] = self.get_show_reports()
-#         return context
-
-#     def get_available_reports(self):
-#         """Get reports available to current user for this view"""
-#         # Lazy import to avoid circular imports
-#         from better_django_tables import models
-
-#         view_name = self.request.resolver_match.view_name
-#         user = self.request.user
-
-#         # Build a single query with Q objects instead of combining QuerySets
-#         query = Q()
-
-#         # Personal reports
-#         query |= Q(
-#             view_name=view_name, visibility="personal", created_by=user, is_active=True
-#         )
-
-#         # Global reports
-#         query |= Q(view_name=view_name, visibility="global", is_active=True)
-
-#         # Group-based reports
-#         user_groups = user.groups.all()
-#         if user_groups.exists():
-#             query |= Q(
-#                 view_name=view_name,
-#                 visibility="group",  # Change to 'group' if you updated the model
-#                 allowed_groups__in=user_groups,
-#                 is_active=True,
-#             )
-
-#         # Get all reports in one query
-#         all_reports = models.Report.objects.filter(query).distinct().order_by("name")
-
-#         # Add favorite status
-#         favorite_report_ids = models.ReportFavorite.objects.filter(
-#             user=user, report__in=all_reports
-#         ).values_list("report_id", flat=True)
-
-#         # Convert to list and add is_favorite attribute
-#         reports_list = list(all_reports)
-#         for report in reports_list:
-#             report.is_favorite = report.id in favorite_report_ids
-
-#         return reports_list
-
-#     def get_current_filter_params(self):
-#         """Extract current filter parameters from request"""
-#         # Remove pagination and other non-filter params
-#         excluded_params = ["page", "per_page", "export", "csrfmiddlewaretoken"]
-#         return {
-#             key: value
-#             for key, value in self.request.GET.items()
-#             if key not in excluded_params and value
-#         }
-
-#     def post(self, request, *args, **kwargs):
-#         """Handle report saving and other POST actions"""
-#         if "save_report" in request.POST:
-#             return self.handle_save_report(request)
-#         elif "toggle_favorite" in request.POST:
-#             return self.handle_toggle_favorite(request)
-#         return super().post(request, *args, **kwargs)
-
-#     def handle_save_report(self, request):
-#         """Save a new report"""
-#         # Lazy import to avoid circular imports
-#         from better_django_tables import forms
-
-#         form = forms.ReportSaveForm(request.POST)
-#         if form.is_valid():
-#             report = form.save(commit=False)
-#             report.created_by = request.user
-#             report.save()
-
-#             # Handle group assignments for group-based reports
-#             if report.visibility == "group":
-#                 groups = form.cleaned_data.get("allowed_groups", [])
-#                 report.allowed_groups.set(groups)
-
-#             messages.success(request, f'Report "{report.name}" saved successfully.')
-#         else:
-#             messages.error(request, "Error saving report. Please check the form.")
-
-#         return redirect(request.path)
-
-#     def handle_toggle_favorite(self, request):
-#         """Toggle favorite status for a report"""
-#         # Lazy import to avoid circular imports
-#         from better_django_tables import models
-
-#         report_id = request.POST.get("report_id")
-#         try:
-#             report = models.Report.objects.get(id=report_id)
-#             favorite, created = models.ReportFavorite.objects.get_or_create(
-#                 user=request.user, report=report
-#             )
-#             if not created:
-#                 favorite.delete()
-#                 messages.success(request, f'Removed "{report.name}" from favorites.')
-#             else:
-#                 messages.success(request, f'Added "{report.name}" to favorites.')
-#         except models.Report.DoesNotExist:
-#             messages.error(request, "Report not found.")
-
-#         return redirect(request.path)
-
-#     def get_show_reports(self, value: bool | None = None) -> bool:
-#         """
-#         Determines if the reports section should be shown.
-
-#         Priority order:
-#         1. 'show_reports' query parameter (e.g., ?show_reports=true)
-#         2. value method argument if provided
-#         2. View's show_reports attribute if it exists
-#         3. Default to True
-
-#         Returns: bool: True if the reports section should be shown, False otherwise.
-#         """
-#         show_param = self.request.GET.get("show_reports")
-#         if show_param is not None:
-#             return show_param.lower() in ["1", "true", "yes"]
-
-#         if value is not None:
-#             return value
-
-#         if hasattr(self, "show_reports") and self.show_reports is not None:
-#             return self.show_reports
-
-#         return self.default_show_reports
+    #     # Redirect to the same page to prevent re-submission
+    #     return redirect(self.get_success_url())
 
 
 class BetterMultiTableMixin(TableMixinBase):
@@ -1066,6 +1019,8 @@ class BetterMultiTableMixin(TableMixinBase):
 
     # override context table name to make sense in a multiple table context
     context_table_name = "tables"
+
+    request: HttpRequest
 
     def get_tables(self):
         """
@@ -1173,6 +1128,8 @@ class SelectColumnsViewMixin:
 
     exclude_param_key: str = "excludeColumns"
     select_param_key: str = "cols"
+
+    request: HttpRequest
 
     def get_table_kwargs(self):
         kwargs = super().get_table_kwargs()
@@ -1312,6 +1269,8 @@ class PerPageViewMixin:
     show_per_page_selector: bool | None = None
     default_show_per_page_selector: bool = True
 
+    request: HttpRequest
+
     def get_paginate_by(self, table_data):
         """
         Get the number of items to display per page.
@@ -1420,6 +1379,8 @@ class ShowPaginationViewMixin:
 
     show_pagination: bool = True
 
+    request: HttpRequest
+
     def get_show_pagination(self, value: bool | None = None) -> bool:
         """
         Determines if the pagination controls should be shown.
@@ -1440,8 +1401,8 @@ class ShowPaginationViewMixin:
 
     def get_table_kwargs(self):
         kwargs = super().get_table_kwargs()
-        if 'show_pagination' not in kwargs:
-            kwargs['show_pagination'] = self.get_show_pagination()
+        if "show_pagination" not in kwargs:
+            kwargs["show_pagination"] = self.get_show_pagination()
         return kwargs
 
 
@@ -1461,6 +1422,8 @@ class ShowFilterMixin:
 
     show_filter: bool = True
     toggle_filter: bool = True
+
+    request: HttpRequest
 
     def get_show_filter(self, value: bool | None = None) -> bool:
         """
@@ -1569,6 +1532,8 @@ class LinksMixin:
     show_links: bool | None = None
     default_show_links: bool = True
 
+    request: HttpRequest
+
     def get_links(self):
         """Return the list of navigation links."""
         return self.links or []
@@ -1620,6 +1585,8 @@ class SearchbarMixin:
 
     show_search_bar: bool = True
 
+    request: HttpRequest
+
     def get_show_search_bar(self, value: bool | None = None) -> bool:
         """
         Determines if the search bar should be shown.
@@ -1662,6 +1629,8 @@ class ShowCreateButtonMixin:
 
     show_create_button: bool | None = None
     default_show_create_button: bool = True
+
+    request: HttpRequest
 
     def get_show_create_button(self, value: bool | None = None) -> bool:
         """
@@ -1706,6 +1675,8 @@ class ShowTableNameViewMixin:
 
     show_table_name: bool | None = None
     default_show_table_name: bool = True
+
+    request: HttpRequest
 
     def get_show_table_name(self, value: bool | None = None) -> bool:
         """
@@ -1779,6 +1750,8 @@ class StreamExportMixin:
     dataset_kwargs = None
     show_export_button: bool | None = None
     default_show_export_button: bool = True
+
+    request: HttpRequest
 
     def get_export_filename(self, export_format):
         """
@@ -1929,7 +1902,6 @@ class HtmxTableViewMixin(
 
     Attributes:
         htmx_template_name (str): Template for HTMX requests. Default: 'better_django_tables/table.html'
-        htmx_show_reports (bool): Show reports in HTMX mode. Default: False
         htmx_show_per_page (bool): Show per-page selector in HTMX mode. Default: False
         htmx_show_filter_badges (bool): Show filter badges in HTMX mode. Default: False
         htmx_show_filter (bool): Show filter sidebar in HTMX mode. Default: False
@@ -1953,7 +1925,6 @@ class HtmxTableViewMixin(
 
     # htmx_template_name = 'better_django_tables/tables/better_table_inline.html'
     htmx_template_name = "better_django_tables/table.html"
-    htmx_show_reports = False
     htmx_show_per_page = False
     htmx_show_filter_badges = False
     htmx_show_filter = False
@@ -1988,7 +1959,6 @@ class HtmxTableViewMixin(
         """
         context = super().get_context_data(**kwargs)
         context["is_htmx"] = hasattr(self.request, "htmx") and self.request.htmx
-        # context["htmx_show_reports"] = self.htmx_show_reports
         # context["htmx_show_per_page"] = self.htmx_show_per_page
         # context["htmx_show_filter_badges"] = self.htmx_show_filter_badges
         return context
@@ -2016,12 +1986,6 @@ class HtmxTableViewMixin(
         if self.request.htmx:
             return super().get_show_search_bar(self.htmx_show_search_bar)
         return super().get_show_search_bar(value)
-
-    def get_show_reports(self, value: bool | None = None) -> bool:
-        """Apply HTMX-specific setting for reports section."""
-        if self.request.htmx:
-            return super().get_show_reports(self.htmx_show_reports)
-        return super().get_show_reports(value)
 
     def get_show_create_button(self, value: bool | None = None) -> bool:
         """Apply HTMX-specific setting for create button."""

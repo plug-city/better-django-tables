@@ -40,7 +40,7 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form id="bulk-delete-form" method="post" action="{% url table.bulk_delete_url_name %}" style="display: inline;">
                     {% csrf_token %}
-                    <input type="hidden" name="next" id="redirectUrl" value="{{ redirect_url }}">
+                    <input type="hidden" name="next" id="redirectUrl" value="{{ bulk_action_redirect_url }}">
                     {% if is_htmx %}
                     <button type="submit"
                             name="bulk_action"

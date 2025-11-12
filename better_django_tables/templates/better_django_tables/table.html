@@ -53,13 +53,6 @@
             {% endif %}
           {% endblock search_bar %}
 
-          {% comment %} <!-- Reports Section -->
-          {% block reports %}
-            {% if available_reports is not None and show_reports %}
-              {% include "better_django_tables/reports/reports.html" %}
-            {% endif %}
-          {% endblock reports %} {% endcomment %}
-
           <!-- Create URL -->
           {% block create_button %}
             {% if table.add_create_button and show_create_button %}
