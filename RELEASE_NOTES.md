@@ -1,5 +1,14 @@
 # Release Notes
 
+## Version 0.11.3 (2025-11-11)
+
+### Improvements
+- Optimized navigation PK storage to respect `navigation_max_pk_count` limit during queryset evaluation
+- Improved database query efficiency for navigation storage by limiting PKs fetched from database
+- Added debug logging for navigation PK count tracking
+
+---
+
 ## Version 0.11.2 (2025-11-11)
 
 ### Improvements

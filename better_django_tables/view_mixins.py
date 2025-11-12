@@ -574,7 +574,15 @@ class NavigationStorageMixin:
             # Generate or retrieve navigation token
             nav_token = self.get_or_create_navigation_token()
 
-            pks = list(self.object_list.values_list("pk", flat=True))
+            max_pk_count = self.get_navigation_max_pk_count()
+
+            # Limit query to only fetch max_pk_count PKs from database
+            if max_pk_count and max_pk_count > 0:
+                pks = list(self.object_list.values_list("pk", flat=True)[:max_pk_count])
+            else:
+                pks = list(self.object_list.values_list("pk", flat=True))
+
+            print(f"Storing {len(pks)} PKs for navigation with token {nav_token}")
 
             # Store in session with token
             self.store_navigation_pks(pks, nav_token)
@@ -1440,8 +1448,8 @@ class ShowPaginationViewMixin:
 
     def get_table_kwargs(self):
         kwargs = super().get_table_kwargs()
-        if 'show_pagination' not in kwargs:
-            kwargs['show_pagination'] = self.get_show_pagination()
+        if "show_pagination" not in kwargs:
+            kwargs["show_pagination"] = self.get_show_pagination()
         return kwargs
 
 
