@@ -852,7 +852,16 @@ class BulkActionViewMixin:
         except ValueError as exc:
             return HttpResponse(str(exc), status=400)
         action_method = action["method"]
-        return action_method(selected_items, action)
+        if selected_items:
+            try:
+                action_method(selected_items, action)
+            except Exception as e:
+                logger.exception("Error during bulk action: %s", e)
+                messages.error(self.request, f"Error performing bulk action: {str(e)}")
+                return self.get(self.request)
+            return self.get_bulk_success_response(action)
+            # return self.handle_bulk_delete(request, selected_items)
+        return self.get(self.request)
 
     def get_bulk_action(self, action_name: str) -> dict:
         """Get the bulk action name from the request."""
@@ -874,24 +883,25 @@ class BulkActionViewMixin:
 
     def bulk_delete(self, selected_items: list, action: dict, *_, **__):
         """Bulk delete action handler."""
-        try:
-            # Get the model from the view
-            model = getattr(self, "model", None)
-            if not model:
-                raise ValueError("Model not specified")
-            # Delete selected items
-            deleted_count, _ = model.objects.filter(pk__in=selected_items).delete()
-            if deleted_count > 0:
-                messages.warning(
-                    self.request,  # type: ignore
-                    f"Successfully deleted {deleted_count} {model._meta.verbose_name}(s).",
-                )
-            else:
-                messages.warning(self.request, "No items were deleted.")
-        except Exception as e:
-            messages.error(self.request, f"Error deleting items: {str(e)}")
+        # try:
+        # Get the model from the view
+        model = getattr(self, "model", None)
+        if not model:
+            raise ValueError("Model not specified")
+        # Delete selected items
+        deleted_count, _ = model.objects.filter(pk__in=selected_items).delete()
+        if deleted_count > 0:
+            messages.warning(
+                self.request,  # type: ignore
+                f"Successfully deleted {deleted_count} {model._meta.verbose_name}(s).",
+            )
+        else:
+            messages.warning(self.request, "No items were deleted.")
+        return
+        # except Exception as e:
+        #     messages.error(self.request, f"Error deleting items: {str(e)}")
 
-        return self.get_bulk_success_response(action)
+        # return self.get_bulk_success_response(action)
 
     def get_bulk_success_response(self, action: dict):
         """Get the success response for a bulk action."""
@@ -902,14 +912,29 @@ class BulkActionViewMixin:
         return redirect(self.get_success_url())
 
     def get_bulk_htmx_triggers(self, action: dict) -> str:
-        """Get the HX-Trigger value for a bulk action."""
+        """
+        Get the HX-Trigger value for a bulk action.
+
+        Supports:
+        - Callable: Will be called with self as argument
+        - Dict: Will be JSON encoded
+        - String: Will be returned as-is
+        - List: Will be JSON encoded
+        """
         htmx_triggers = []
         if action.get("use_model_htmx_trigger", True):
             model_htmx_trigger = getattr(self.model, "htmx_trigger", None)  # type: ignore
             if model_htmx_trigger:
                 htmx_triggers.append(model_htmx_trigger)
         if "htmx_triggers" in action:
-            htmx_triggers.extend(action["htmx_triggers"])
+            triggers = action["htmx_triggers"]
+            # Check if htmx_triggers is callable
+            if callable(triggers):
+                triggers = triggers(self)
+            # If it's not a list, make it one
+            if not isinstance(triggers, list):
+                triggers = [triggers]
+            htmx_triggers.extend(triggers)
         return json.dumps(htmx_triggers) if len(htmx_triggers) > 1 else htmx_triggers[0]
 
     # def handle_bulk_delete(self, request, selected_items):
