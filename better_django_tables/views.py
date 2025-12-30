@@ -21,7 +21,7 @@ from better_django_tables.view_mixins import (
     SelectColumnsViewMixin,
     # LinksMixin,
 )
-from better_django_tables import models, filters, tables
+from better_django_tables import tables
 
 
 logger = logging.getLogger(__name__)

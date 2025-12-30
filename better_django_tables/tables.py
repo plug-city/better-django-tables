@@ -3,7 +3,6 @@ from django.urls import reverse
 
 import django_tables2 as tables
 
-from better_django_tables import models
 from better_django_tables.table_mixins import (
     DeletableTableMixin,
     BulkActionTableMixin,
