@@ -917,9 +917,14 @@ class BulkActionViewMixin:
 
         Supports:
         - Callable: Will be called with self as argument
-        - Dict: Will be JSON encoded
-        - String: Will be returned as-is
-        - List: Will be JSON encoded
+        - Dict: Will be JSON encoded as object
+        - String: Will be returned as-is or comma-separated if multiple
+        - List: Will be comma-separated or JSON object
+
+        Returns:
+        - Single trigger: "eventName"
+        - Multiple string triggers: "event1, event2, event3"
+        - Dict triggers: {"event1": {}, "event2": {"key": "value"}}
         """
         htmx_triggers = []
         if action.get("use_model_htmx_trigger", True):
@@ -935,7 +940,37 @@ class BulkActionViewMixin:
             if not isinstance(triggers, list):
                 triggers = [triggers]
             htmx_triggers.extend(triggers)
-        return json.dumps(htmx_triggers) if len(htmx_triggers) > 1 else htmx_triggers[0]
+
+        # Handle empty case
+        if not htmx_triggers:
+            return ""
+
+        # Single trigger - return as-is
+        if len(htmx_triggers) == 1:
+            trigger = htmx_triggers[0]
+            if isinstance(trigger, dict):
+                return json.dumps(trigger)
+            return str(trigger)
+
+        # Multiple triggers - check if any are dicts
+        has_dict = any(isinstance(t, dict) for t in htmx_triggers)
+
+        if has_dict:
+            # Build JSON object: {event1: {}, event2: {}}
+            trigger_obj = {}
+            for trigger in htmx_triggers:
+                if isinstance(trigger, dict):
+                    trigger_obj.update(trigger)
+                else:
+                    # String trigger becomes empty object
+                    trigger_obj[str(trigger)] = {}
+            triggers_str = json.dumps(trigger_obj)
+        else:
+            # All strings - comma-separated list
+            triggers_str = ", ".join(str(t) for t in htmx_triggers)
+
+        logger.debug("Bulk action HX-Trigger: %s", triggers_str)
+        return triggers_str
 
     # def handle_bulk_delete(self, request, selected_items):
     #     """Handle bulk delete action."""

@@ -1,5 +1,23 @@
 # Release Notes
 
+## Version 0.12.2 (2025-12-31)
+
+### Bug Fixes
+- Fixed `get_bulk_htmx_triggers` to return proper HTMX trigger formats
+  - Returns comma-separated list for multiple string triggers (e.g., "event1, event2")
+  - Returns JSON object for dict triggers (e.g., {"event1": {}, "event2": {}})
+  - Previously returned JSON array which is not valid for HX-Trigger header
+
+---
+
+## Version 0.12.1 (2025-12-31)
+
+### Improvements
+- Enhanced bulk action HTMX trigger handling with better documentation
+- Improved trigger format flexibility for single and multiple events
+
+---
+
 ## Version 0.12.0 (2025-12-30)
 
 ### Changes
