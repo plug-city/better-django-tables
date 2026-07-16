@@ -1,5 +1,18 @@
 # Release Notes
 
+## Version 0.13.0 (2026-07-16)
+
+### New Features
+- Added shared support for rendering view-defined `extra_bulk_actions` in the bulk actions bar
+- Added an `Actions` dropdown for non-delete bulk actions in the shared bulk actions template
+
+### Improvements
+- Added default title-cased labels for bulk actions when no explicit `label` is provided
+- Improved bulk action JavaScript to reuse selected row handling across delete and custom actions
+- Prevented duplicate bulk action event listeners after HTMX swaps
+
+---
+
 ## Version 0.12.2 (2025-12-31)
 
 ### Bug Fixes
