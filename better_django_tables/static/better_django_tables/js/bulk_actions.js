@@ -1,24 +1,62 @@
 function setupBulkActions() {
-    // Find all tables and process each one separately
     const tables = document.querySelectorAll('.bulk-actions-table');
 
-    tables.forEach(table => {
-        const tableId = table.id;
-        // Find elements specific to this table
-        // const selectAllCheckbox = document.getElementById(`select-all-${tableId}`);
-        const selectAllCheckbox = table.querySelector('.select-all-checkbox');
-        const individualCheckboxes = document.querySelectorAll(`.select-item-${tableId}`);
-        const bulkActions = document.getElementById(`bulk-actions-${tableId}`);
-        const selectedCountSpan = bulkActions ? bulkActions.querySelector(`#selected-count-${tableId}`) : null;
-        const clearSelectionBtn = bulkActions ? bulkActions.querySelector(`#clear-selection-${tableId}`) : null;
-        const bulkDeleteBtn = bulkActions ? bulkActions.querySelector(`#bulk-delete-btn-${tableId}`) : null;
-        const bulkDeleteModal = document.getElementById(`bulkDeleteModal-${tableId}`);
+    tables.forEach((table) => {
+        if (table.dataset.bulkActionsInitialized === 'true') {
+            return;
+        }
+        table.dataset.bulkActionsInitialized = 'true';
 
-        // Skip if essential elements aren't found
-        if (!selectAllCheckbox || !individualCheckboxes.length) return;
+        const tableId = table.id;
+        const selectAllCheckbox = table.querySelector('.select-all-checkbox');
+        const bulkActions = document.getElementById(`bulk-actions-${tableId}`);
+        const selectedCountSpan = bulkActions
+            ? bulkActions.querySelector(`#selected-count-${tableId}`)
+            : null;
+        const clearSelectionBtn = bulkActions
+            ? bulkActions.querySelector(`#clear-selection-${tableId}`)
+            : null;
+        const bulkDeleteBtn = bulkActions
+            ? bulkActions.querySelector(`#bulk-delete-btn-${tableId}`)
+            : null;
+        const bulkDeleteModal = document.getElementById(`bulkDeleteModal-${tableId}`);
+        const bulkActionForms = bulkActions
+            ? bulkActions.querySelectorAll('[data-bulk-action-form]')
+            : [];
+
+        if (!selectAllCheckbox) {
+            return;
+        }
+
+        function getIndividualCheckboxes() {
+            return Array.from(table.querySelectorAll(`.select-item-${tableId}`));
+        }
+
+        function getSelectedCheckboxes() {
+            return Array.from(table.querySelectorAll(`.select-item-${tableId}:checked`));
+        }
+
+        function syncSelectedItems(form, selectedIds) {
+            if (!form) {
+                return;
+            }
+
+            form.querySelectorAll('input[name="selected_items"]').forEach((input) => {
+                input.remove();
+            });
+
+            selectedIds.forEach((id) => {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'selected_items';
+                hiddenInput.value = id;
+                form.appendChild(hiddenInput);
+            });
+        }
 
         function updateBulkActionsVisibility() {
-            const checkedCount = document.querySelectorAll(`.select-item-${tableId}:checked`).length;
+            const individualCheckboxes = getIndividualCheckboxes();
+            const checkedCount = getSelectedCheckboxes().length;
 
             if (bulkActions && selectedCountSpan) {
                 if (checkedCount > 0) {
@@ -29,7 +67,6 @@ function setupBulkActions() {
                 }
             }
 
-            // Update select all checkbox state
             if (checkedCount === 0) {
                 selectAllCheckbox.indeterminate = false;
                 selectAllCheckbox.checked = false;
@@ -42,55 +79,53 @@ function setupBulkActions() {
             }
         }
 
-        // Set up event handlers
         selectAllCheckbox.addEventListener('change', function() {
-            individualCheckboxes.forEach(checkbox => {
+            getIndividualCheckboxes().forEach((checkbox) => {
                 checkbox.checked = this.checked;
             });
             updateBulkActionsVisibility();
         });
 
-        individualCheckboxes.forEach(checkbox => {
+        getIndividualCheckboxes().forEach((checkbox) => {
             checkbox.addEventListener('change', updateBulkActionsVisibility);
         });
 
         if (clearSelectionBtn) {
-            clearSelectionBtn.addEventListener('click', function() {
-                individualCheckboxes.forEach(checkbox => {
+            clearSelectionBtn.addEventListener('click', () => {
+                getIndividualCheckboxes().forEach((checkbox) => {
                     checkbox.checked = false;
                 });
                 updateBulkActionsVisibility();
             });
         }
 
+        bulkActionForms.forEach((form) => {
+            form.addEventListener('submit', () => {
+                const selectedIds = getSelectedCheckboxes().map((checkbox) => checkbox.value);
+                syncSelectedItems(form, selectedIds);
+            });
+        });
+
         if (bulkDeleteBtn && bulkDeleteModal) {
-            bulkDeleteBtn.addEventListener('click', function() {
-                const selectedItems = Array.from(document.querySelectorAll(`.select-item-${tableId}:checked`));
-                const selectedIds = selectedItems.map(cb => cb.value);
-                const selectedNames = selectedItems.map(cb => cb.dataset.itemName);
+            bulkDeleteBtn.addEventListener('click', () => {
+                const selectedItems = getSelectedCheckboxes();
+                const selectedIds = selectedItems.map((checkbox) => checkbox.value);
+                const selectedNames = selectedItems.map((checkbox) => checkbox.dataset.itemName);
 
                 const bulkDeleteForm = bulkDeleteModal.querySelector('#bulk-delete-form');
-                if (bulkDeleteForm) {
-                    bulkDeleteForm.querySelectorAll('input[name="selected_items"]').forEach(input => input.remove());
-                    selectedIds.forEach(id => {
-                        const hiddenInput = document.createElement('input');
-                        hiddenInput.type = 'hidden';
-                        hiddenInput.name = 'selected_items';
-                        hiddenInput.value = id;
-                        bulkDeleteForm.appendChild(hiddenInput);
-                    });
-                }
+                syncSelectedItems(bulkDeleteForm, selectedIds);
 
                 const countSpan = bulkDeleteModal.querySelector('#bulk-delete-count');
                 const itemsList = bulkDeleteModal.querySelector('#bulk-delete-items');
-                if (countSpan) countSpan.textContent = selectedIds.length;
+                if (countSpan) {
+                    countSpan.textContent = selectedIds.length;
+                }
                 if (itemsList) {
-                    itemsList.innerHTML = selectedNames.map(name => `<li>${name}</li>`).join('');
+                    itemsList.innerHTML = selectedNames.map((name) => `<li>${name}</li>`).join('');
                 }
             });
         }
 
-        // Initialize visibility
         updateBulkActionsVisibility();
     });
 }

@@ -800,12 +800,17 @@ class BulkActionViewMixin:
         self.bulk_actions = {}
         actions_list = self.standard_actions + self.extra_bulk_actions
         for action in actions_list:
-            if action["name"] in self.bulk_actions:
+            action_config = action.copy()
+            if action_config["name"] in self.bulk_actions:
                 raise ImproperlyConfigured(
-                    f"Duplicate bulk action name: {action['name']}"
+                    f"Duplicate bulk action name: {action_config['name']}"
                 )
-            action["method"] = self.get_bulk_action_method(action)
-            self.bulk_actions[action["name"]] = action
+            action_config["method"] = self.get_bulk_action_method(action_config)
+            action_config.setdefault(
+                "label",
+                action_config["name"].replace("_", " ").title(),
+            )
+            self.bulk_actions[action_config["name"]] = action_config
 
     def get_bulk_delete_hx_trigger(self):
         """
@@ -827,6 +832,9 @@ class BulkActionViewMixin:
         context["bulk_action_redirect_url"] = self.request.GET.get(
             "next", self.request.path
         )
+        context["extra_bulk_actions"] = [
+            action for name, action in self.bulk_actions.items() if name != "delete"
+        ]
         return context
 
     def post(self, request, *args, **kwargs):

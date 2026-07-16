@@ -1,9 +1,53 @@
-<!-- Bulk Actions -->
+{% load querystring from django_tables2 %}
+
 <div id="bulk-actions-{{ table.table_id }}" class="bulk-actions d-none mb-2">
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
         <span class="text-muted">
             <span id="selected-count-{{ table.table_id }}">0</span> item(s) selected
         </span>
+
+        {% if extra_bulk_actions %}
+        <div class="dropdown">
+            <button
+                type="button"
+                class="btn btn-outline-secondary btn-sm dropdown-toggle"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+            >
+                Actions
+            </button>
+            <ul class="dropdown-menu">
+                {% for action in extra_bulk_actions %}
+                <li>
+                    <form
+                        method="post"
+                        action="{{ request.get_full_path }}"
+                        class="m-0"
+                        data-bulk-action-form
+                        data-table-id="{{ table.table_id }}"
+                        {% if is_htmx %}
+                        hx-post="{{ request.path }}{% querystring %}"
+                        hx-target="closest .bdt-table-container"
+                        hx-swap="outerHTML"
+                        hx-indicator="#htmx-indicator"
+                        {% endif %}
+                    >
+                        {% csrf_token %}
+                        <input type="hidden" name="bulk_action" value="{{ action.name }}">
+                        <input type="hidden" name="next" value="{{ bulk_action_redirect_url }}">
+                        <button
+                            type="submit"
+                            class="{% firstof action.dropdown_item_class action.button_class 'dropdown-item' %}"
+                        >
+                            {% if action.icon_class %}<i class="{{ action.icon_class }}"></i> {% endif %}{{ action.label }}
+                        </button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
         {% if table.bulk_delete_url_name %}
         <button type="button"
                 class="btn btn-danger btn-sm"
@@ -22,7 +66,6 @@
 </div>
 
 {% if table.bulk_delete_url_name %}
-<!-- Bulk Delete Modal -->
 <div class="modal fade" id="bulkDeleteModal-{{table.table_id}}" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
