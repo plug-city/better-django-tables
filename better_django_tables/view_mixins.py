@@ -10,6 +10,7 @@ from typing import Callable
 
 from itertools import count
 
+from django import forms
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.db.models import Q
@@ -633,6 +634,28 @@ class ActiveFilterMixin:
 
         return choice_map.get(str(value), str(value))
 
+    def _get_filter_param_value(self, value):
+        if hasattr(value, "pk"):
+            return str(value.pk)
+        return str(value)
+
+    def build_clear_url_for_value(self, field_name, value):
+        """Return a URL with a single selected value removed from a multi-value filter."""
+        request = self.request
+        params = request.GET.copy()
+        target_value = self._get_filter_param_value(value)
+        current_values = params.getlist(field_name)
+        remaining_values = [item for item in current_values if item != target_value]
+
+        if remaining_values:
+            params.setlist(field_name, remaining_values)
+        else:
+            params.pop(field_name, None)
+
+        base_path = request.path
+        query = params.urlencode()
+        return f"{base_path}?{query}" if query else base_path
+
     def get_active_filters(self, filter_instance):
         """Extract active filters from a django-filter instance, including date ranges"""
         active_filters = []
@@ -648,9 +671,12 @@ class ActiveFilterMixin:
             if not value:
                 continue
 
-            # Handle date range (list, tuple, or slice)
-            if (isinstance(value, (list, tuple)) and len(value) == 2) or isinstance(
-                value, slice
+            # Handle range fields separately so ordinary multi-select filters
+            # with two values are not mistaken for date ranges.
+            if isinstance(value, slice) or (
+                isinstance(field, forms.MultiValueField)
+                and isinstance(value, (list, tuple))
+                and len(value) == 2
             ):
                 if isinstance(value, slice):
                     start, end = value.start, value.stop
@@ -688,6 +714,25 @@ class ActiveFilterMixin:
                             "display_value": display_value,
                             "clear_params": clear_params,
                             "clear_url": clear_url,
+                        }
+                    )
+                continue
+
+            if self._is_multi_value_filter(value):
+                for item in value:
+                    active_filters.append(
+                        {
+                            "name": field_name,
+                            "label": field.label
+                            or field_name.replace("_", " ").title(),
+                            "value": item,
+                            "display_value": self._format_filter_display_value(
+                                field, item
+                            ),
+                            "clear_params": [field_name],
+                            "clear_url": self.build_clear_url_for_value(
+                                field_name, item
+                            ),
                         }
                     )
                 continue

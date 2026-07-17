@@ -8,7 +8,7 @@ from better_django_tables.view_mixins import ActiveFilterMixin
 
 
 class TestActiveFilterMixin(SimpleTestCase):
-    def test_multi_choice_filters_have_clear_urls_and_human_labels(self):
+    def test_multi_choice_filters_have_per_value_clear_urls_and_human_labels(self):
         class FilterForm(forms.Form):
             status = forms.MultipleChoiceField(
                 choices=[
@@ -60,5 +60,14 @@ class TestActiveFilterMixin(SimpleTestCase):
             "/leads/?status_exclude=dead&status_exclude=closed",
         )
 
-        self.assertEqual(active_filters[1]["display_value"], "Dead – Closed")
-        self.assertEqual(active_filters[1]["clear_url"], "/leads/?status=contacted")
+        self.assertEqual(active_filters[1]["display_value"], "Dead")
+        self.assertEqual(
+            active_filters[1]["clear_url"],
+            "/leads/?status=contacted&status_exclude=closed",
+        )
+
+        self.assertEqual(active_filters[2]["display_value"], "Closed")
+        self.assertEqual(
+            active_filters[2]["clear_url"],
+            "/leads/?status=contacted&status_exclude=dead",
+        )

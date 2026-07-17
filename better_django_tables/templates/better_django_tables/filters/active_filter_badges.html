@@ -1,28 +1,26 @@
 {% load querystring from django_tables2 %}
 <!-- Active Filters Display -->
 {% if active_filters %}
-  <div class="mb-3">
+  <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
     {% for active_filter in active_filters %}
-      <span class="badge bg-light text-dark me-1 mb-1">
-        {{ active_filter.label }}: {{ active_filter.display_value }}
-        {% if active_filter.clear_params %}
-          {% comment %} <a href="{% for param in active_filter.clear_params %}{% if not forloop.first %}&{% endif %}{% querystring param='' %}{% endfor %}" class="text-white text-decoration-none ms-1"> {% endcomment %}
-          {% comment %} <a href="{% querystring {% for param in active_filter.clear_params %} param='' {% endfor %} %}" class="text-white text-decoration-none ms-1">
-            <i class="bi bi-x"></i>
-          </a> {% endcomment %}
-        <a href="{{ active_filter.clear_url }}" class="text-white text-decoration-none ms-1">
-          <i class="bi bi-x"></i>
-        </a>
-        {% else %}
-          <a href="{% querystring active_filter.name='' %}" class="text-dark text-decoration-none ms-1">
-            <i class="bi bi-x"></i>
+      <span class="badge rounded-pill border border-secondary-subtle bg-light text-dark px-3 py-2 fw-normal">
+        <span class="fw-semibold">{{ active_filter.label }}:</span>
+        <span>{{ active_filter.display_value }}</span>
+        {% if active_filter.clear_url %}
+          <a
+            href="{{ active_filter.clear_url }}"
+            class="text-dark text-decoration-none ms-2 fw-semibold"
+            aria-label="Remove {{ active_filter.label }} filter"
+            title="Remove filter"
+          >
+            <i class="bi bi-x-lg"></i>
           </a>
         {% endif %}
       </span>
     {% endfor %}
 
     <!-- Clear all filters button -->
-    <a href="?" class="btn btn-outline-secondary btn-sm ms-2">
+    <a href="?" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-funnel"></i> Clear All Filters
     </a>
   </div>
