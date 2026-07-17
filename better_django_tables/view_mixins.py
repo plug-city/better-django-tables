@@ -1,4 +1,5 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring,too-few-public-methods
+from collections.abc import Iterable
 import logging
 import csv
 import json
@@ -607,6 +608,31 @@ class ActiveFilterMixin:
 
     request: HttpRequest
 
+    def _build_filter_choice_map(self, field):
+        choice_map = {}
+        for choice_value, choice_label in getattr(field, "choices", ()):
+            if isinstance(choice_label, (list, tuple)):
+                for nested_value, nested_label in choice_label:
+                    choice_map[str(nested_value)] = str(nested_label)
+            else:
+                choice_map[str(choice_value)] = str(choice_label)
+        return choice_map
+
+    def _is_multi_value_filter(self, value):
+        return (
+            isinstance(value, Iterable)
+            and not isinstance(value, (str, bytes, dict, slice))
+        )
+
+    def _format_filter_display_value(self, field, value):
+        choice_map = self._build_filter_choice_map(field)
+
+        if self._is_multi_value_filter(value):
+            items = list(value)
+            return " – ".join(choice_map.get(str(item), str(item)) for item in items)
+
+        return choice_map.get(str(value), str(value))
+
     def get_active_filters(self, filter_instance):
         """Extract active filters from a django-filter instance, including date ranges"""
         active_filters = []
@@ -667,12 +693,15 @@ class ActiveFilterMixin:
                 continue
 
             # Handle normal fields
+            clear_params = [field_name]
             active_filters.append(
                 {
                     "name": field_name,
                     "label": field.label or field_name.replace("_", " ").title(),
                     "value": value,
-                    "display_value": str(value),
+                    "display_value": self._format_filter_display_value(field, value),
+                    "clear_params": clear_params,
+                    "clear_url": self.build_clear_url(clear_params),
                 }
             )
 
@@ -685,6 +714,8 @@ class ActiveFilterMixin:
                     "label": "Search",
                     "value": search_value,
                     "display_value": f'"{search_value}"',
+                    "clear_params": ["search"],
+                    "clear_url": self.build_clear_url(["search"]),
                 }
             )
 
